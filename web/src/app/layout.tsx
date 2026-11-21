@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
+import FreshnessBanner from "@/components/FreshnessBanner";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,6 +26,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               🍾 Akce na pátek
             </Link>
           </div>
+          <Suspense fallback={null}>
+            <FreshnessBanner />
+          </Suspense>
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4">{children}</main>
         <footer className="border-t border-neutral-200 py-6 text-center text-xs text-neutral-500">

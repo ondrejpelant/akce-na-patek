@@ -35,12 +35,12 @@ Cíl: vědět, co reálně stáhneme, než napíšeme řádek appky.
 **AK:** `run --store penny` naplní DB (3 products, 6 prices); druhé spuštění téhož dne vložilo 0 nových řádků v `price`; `v_product_card` vrací 3 karty s nejnižší cenou. ✅
 
 ## M3 — Web MVP
-- [ ] Mřížka `/` s vyhledáváním a kategoriemi ([[06 Frontend/UI specifikace]])
-- [ ] Detail `/p/[slug]`
-- [ ] noindex, patička, placeholder obrázky
-- [ ] Deploy na Vercel ([[07 Provoz/Deploy]])
+- [x] Mřížka `/` s vyhledáváním a kategoriemi ([[06 Frontend/UI specifikace]])
+- [x] Detail `/p/[slug]`
+- [x] noindex, patička, placeholder obrázky (`BottlePlaceholder` per kategorie), light-only (dark mode je NE v MVP)
+- [ ] Deploy na Vercel ([[07 Provoz/Deploy]]) — čeká na Ondru v UI
 
-**AK:** na telefonu najdu produkt vyhledáním „finl“ i „koňak“/„konak“ a v detailu vidím ceny; Lighthouse mobile Performance ≥ 85.
+**AK:** `/?q=jemna` i `/?q=jemn%C3%A1` vrací vodku (diakritika tolerance ✓); kliknutí na kartu otevře `/p/<slug>` s nabídkou obchodu, cenou, slevou -21 % a datem platnosti; viewport 375×812 bez horizontálního scrollu. Lighthouse zatím nespuštěn — až po Vercel deployi (localhost dev build neřekne realistické skóre).
 
 ## M4 — Aktualizace jedním klikem
 - [ ] `scraper update` + `aktualizuj.bat` + souhrnná tabulka ([[05 Scraper/Aktualizace dat]])
