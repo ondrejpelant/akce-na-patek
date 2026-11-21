@@ -182,6 +182,28 @@ export async function fetchOffers(productId: number): Promise<StoreOffer[]> {
 // Freshness banner
 // ---------------------------------------------------------------------------
 
+export type PricePoint = { day: string; price: number }; // day = YYYY-MM-DD
+
+/**
+ * Lowest valid price per day over the last 90 days (db/migrations/004).
+ * Returns [] when the view is missing or web_ro lacks the grant, so the
+ * detail page still renders before the migration is applied.
+ */
+export async function fetchPriceHistory(productId: number): Promise<PricePoint[]> {
+  try {
+    const rows = (await sql`
+      select to_char(day, 'YYYY-MM-DD') as day, best_price
+      from v_daily_best_price
+      where product_id = ${productId}
+      order by day
+    `) as Record<string, unknown>[];
+    return rows.map((r) => ({ day: String(r.day), price: Number(r.best_price) }));
+  } catch (err) {
+    console.warn("price history unavailable:", err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
 export type StatusRow = {
   code: string;
   name: string;

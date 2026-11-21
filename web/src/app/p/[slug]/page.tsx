@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BottlePlaceholder from "@/components/BottlePlaceholder";
-
-export const instant = false;
-
 import LoyaltyBadge from "@/components/LoyaltyBadge";
-import { fetchOffers, fetchProduct, type StoreOffer } from "@/lib/queries";
+import PriceSparkline from "@/components/PriceSparkline";
+import { fetchOffers, fetchPriceHistory, fetchProduct, type StoreOffer } from "@/lib/queries";
 import { CATEGORY_NAMES } from "@/lib/categories";
 import {
   discountPercent,
@@ -16,12 +14,17 @@ import {
   relativeTimeSince,
 } from "@/lib/format";
 
+export const instant = false;
+
 export default async function ProductPage({ params }: PageProps<"/p/[slug]">) {
   const { slug } = await params;
   const product = await fetchProduct(slug);
   if (!product) notFound();
 
-  const offers = await fetchOffers(product.id);
+  const [offers, history] = await Promise.all([
+    fetchOffers(product.id),
+    fetchPriceHistory(product.id),
+  ]);
   const lowest = offers[0];
 
   return (
@@ -81,6 +84,8 @@ export default async function ProductPage({ params }: PageProps<"/p/[slug]">) {
           ))}
         </ul>
       )}
+
+      <PriceSparkline points={history} />
 
       {offers.length > 0 && (
         <p className="text-center text-xs text-neutral-500">

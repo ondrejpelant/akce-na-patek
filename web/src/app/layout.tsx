@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
 import { Suspense } from "react";
 import FreshnessBanner from "@/components/FreshnessBanner";
+import { APP_COLOR } from "@/lib/appIcon";
 import "./globals.css";
 
 const inter = Inter({
@@ -14,6 +15,11 @@ export const metadata: Metadata = {
   title: "Akce na pátek",
   description: "Osobní srovnávač cen alkoholu v českých supermarketech.",
   robots: { index: false, follow: false },
+  appleWebApp: { capable: true, title: "Akce na pátek", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  themeColor: APP_COLOR,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

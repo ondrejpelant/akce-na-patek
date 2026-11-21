@@ -217,6 +217,11 @@ Refresh po aktualizaci: `refresh materialized view concurrently mv_current_price
 Nejnižší cena **zahrnuje i věrnostní ceny** (rozhodnuto 21. 11.) — UI je jen vizuálně odliší.
 Výkon: tisíce řádků, view nad MV stačí. Kdyby mřížka zpomalila, přidat trigram index na `product.search_text` (už existuje) a filtrovat přes `product`.
 
+## Historie cen — `db/migrations/004_price_history.sql` (M6)
+- `v_price_history` — každá SCD2 verze ceny spárované položky (product_id, store_id, typ, zdroj, cena, promo a SCD2 platnost).
+- `v_daily_best_price` — nejnižší platná cena produktu po dnech za posledních 90 dní; stejná pravidla platnosti jako `v_store_offer_today` (běžná vždy, akce jen v promo okně). Dnešní hodnota = `v_product_card.best_price` (ověřeno nad všemi 43 produkty).
+- `grant select … to web_ro` je součástí migrace. Web bez migrace funguje, jen graf nezobrazí.
+
 ## Role
 ```sql
 create role web_ro login password '...';

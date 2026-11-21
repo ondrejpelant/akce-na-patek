@@ -66,7 +66,7 @@ Cíl: vědět, co reálně stáhneme, než napíšeme řádek appky.
 - ⚠️ Tesco dává jen 1. stránku (~48 produktů ze 346) — stránka 2 vrací 403, neobcházíme. Viz [[04 Zdroje/Tesco]].
 
 ## M6 — Vylepšení
-- [ ] Řazení dle ceny/l a slevy, filtr „jen akce“
-- [ ] Sparkline historie cen
-- [ ] PWA manifest
-- [ ] P3 zdroje (pokud spike dovolí), víno/šumivé
+- [x] Řazení dle ceny/l a slevy, filtr „jen akce“ (hotové už v M3, ověřeno 21. 11.)
+- [x] Sparkline historie cen — `PriceSparkline` v detailu; data z `v_daily_best_price` (**migrace `004_price_history.sql` musí Ondra spustit v Neonu**). Zobrazí se od 2. dne s daty.
+- [x] PWA manifest — `/manifest.webmanifest`, generované ikony (`icon`, `apple-icon`, `/pwa-icon/*`), bez service workeru
+- [ ] P3 zdroje (pokud spike dovolí), víno/šumivé — čeká na rozhodnutí (víno je v rozporu s „Jen lihoviny“ z 21. 11.)
