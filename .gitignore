@@ -19,6 +19,7 @@ __pycache__/
 
 # scraper runtime
 scraper/logs/
+scraper/.cache/
 scraper/tests/fixtures/_tmp/
 
 # obsidian

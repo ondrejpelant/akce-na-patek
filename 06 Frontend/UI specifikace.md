@@ -54,6 +54,8 @@ Aktualizováno dnes 4:12 · ceny bez záruky
 ```
 - Řádek = jedna dnes platná cena; obchod může mít víc řádků (např. Tesco Clubcard + běžná). Vše seřazeno vzestupně (od 21. 11. 2026; dřív jen nejnižší cena za obchod).
 - Pod seznamem šedě „Bez ceny: …" — aktivní obchody, kde jsme produkt neviděli nebo jejich ceny nestahujeme.
+- Cena ověřená před víc než 2 dny má v podtitulku „· ověřeno DD. M." (Tesco se obnovuje po výpisech).
+- Sekce „Další {značka} v obchodech" — až 8 produktů stejné značky s dnešní cenou (miniatura, objem, obchody, nejnižší cena, Kč/l); napřed ty z obchodů, kde aktuální produkt chybí.
 - Fotka nahoře velká (čtverec max. 320 px), pod ní název.
 - Pokud je produkt v akci, pod akční cenou přeškrtnutě běžná cena (`regular_czk`) a % slevy.
 - Každý řádek odkazuje do obchodu (`url`), `target=_blank rel=noopener`.

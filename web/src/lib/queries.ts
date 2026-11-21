@@ -187,6 +187,59 @@ export async function fetchOffers(productId: number): Promise<StoreOffer[]> {
   }));
 }
 
+export type RelatedProduct = {
+  slug: string;
+  brand: string;
+  name: string;
+  volume_ml: number;
+  image_url: string | null;
+  best_price: number;
+  best_price_type: PriceType;
+  price_per_l: number;
+  stores: string[];
+};
+
+/**
+ * Other products of the same brand that have a price today, with the stores
+ * selling them. Ones sold in a store the current product is missing from
+ * come first, then cheapest per litre.
+ */
+export async function fetchSameBrand(
+  productId: number,
+  brand: string,
+  limit = 8,
+): Promise<RelatedProduct[]> {
+  const rows = (await sql`
+    with mine as (
+      select distinct store_id from v_store_offer_today where product_id = ${productId}
+    )
+    select c.slug, c.brand, c.name, c.volume_ml, c.image_url, c.best_price,
+           c.best_price_type, c.price_per_l,
+           array_agg(distinct s.name order by s.name) as stores,
+           bool_or(o.store_id not in (select store_id from mine)) as elsewhere
+    from v_product_card c
+    join v_store_offer_today o on o.product_id = c.id
+    join store s on s.id = o.store_id
+    where f_norm(c.brand) = f_norm(${brand}) and c.id <> ${productId}
+    group by c.id, c.slug, c.brand, c.name, c.volume_ml, c.image_url, c.best_price,
+             c.best_price_type, c.price_per_l
+    order by elsewhere desc, c.price_per_l asc
+    limit ${limit}
+  `) as Record<string, unknown>[];
+
+  return rows.map((r) => ({
+    slug: String(r.slug),
+    brand: String(r.brand),
+    name: String(r.name),
+    volume_ml: Number(r.volume_ml),
+    image_url: r.image_url == null ? null : String(r.image_url),
+    best_price: Number(r.best_price),
+    best_price_type: r.best_price_type as PriceType,
+    price_per_l: Number(r.price_per_l),
+    stores: (r.stores as string[]) ?? [],
+  }));
+}
+
 export async function fetchActiveStoreNames(): Promise<{ id: number; name: string }[]> {
   const rows = (await sql`
     select id, name from store where is_active order by name

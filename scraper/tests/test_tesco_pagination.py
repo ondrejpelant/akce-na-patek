@@ -1,18 +1,28 @@
-from scraper.sources.tesco import _total_pages
+from scraper.sources import tesco
 
 
-def test_total_pages_with_nbsp():
-    html = (
-        '<div class="ddsweb-pagination__results">'
-        "Zobrazeno 1 až 48 z&nbsp;346&nbsp;produktů</div>"
+def test_page_url_for_whole_listing_and_subcategory():
+    assert tesco.page_url("", "relevance") == (
+        "https://nakup.itesco.cz/shop/cs-CZ/browse/napoje/lihoviny?sortBy=relevance&count=48"
     )
-    assert _total_pages(html) == 8
+    assert tesco.page_url("vodka", "price-ascending") == (
+        "https://nakup.itesco.cz/shop/cs-CZ/browse/napoje/lihoviny/vodka"
+        "?sortBy=price-ascending&count=48"
+    )
 
 
-def test_total_pages_plain_spaces():
-    html = '<div class="ddsweb-pagination__results">Zobrazeno 1 až 24 z 346 produktů</div>'
-    assert _total_pages(html) == 8
+def test_rotation_covers_every_listing_and_sort_once():
+    assert len(tesco.ROTATION) == len(set(tesco.ROTATION)) == len(tesco.LISTINGS) * len(tesco.SORTS)
 
 
-def test_total_pages_missing_falls_back_to_one():
-    assert _total_pages("<div>nic</div>") == 1
+def test_rotation_state_advances_and_wraps(tmp_path, monkeypatch):
+    state = tmp_path / ".cache" / "tesco_rotation.txt"
+    monkeypatch.setattr(tesco, "_rotation_file", lambda: state)
+
+    assert tesco._next_rotation_step() == 0          # no file yet
+    tesco._save_rotation_step(5)
+    assert tesco._next_rotation_step() == 5
+    tesco._save_rotation_step(len(tesco.ROTATION))   # wraps to the start
+    assert tesco._next_rotation_step() == 0
+    state.write_text("garbage")
+    assert tesco._next_rotation_step() == 0

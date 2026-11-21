@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import BottlePlaceholder from "@/components/BottlePlaceholder";
 import LoyaltyBadge from "@/components/LoyaltyBadge";
 import PriceSparkline from "@/components/PriceSparkline";
+import SameBrandList from "@/components/SameBrandList";
 import {
   fetchActiveStoreNames,
   fetchOffers,
   fetchPriceHistory,
   fetchProduct,
+  fetchSameBrand,
   type StoreOffer,
 } from "@/lib/queries";
 import { CATEGORY_NAMES } from "@/lib/categories";
@@ -23,15 +25,21 @@ import {
 
 export const instant = false;
 
+const STALE_AFTER_MS = 2 * 24 * 3_600_000;
+
 export default async function ProductPage({ params }: PageProps<"/p/[slug]">) {
   const { slug } = await params;
+  // Rendered per request (reads live DB), so request time is the right "now".
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
   const product = await fetchProduct(slug);
   if (!product) notFound();
 
-  const [offers, history, stores] = await Promise.all([
+  const [offers, history, stores, sameBrand] = await Promise.all([
     fetchOffers(product.id),
     fetchPriceHistory(product.id),
     fetchActiveStoreNames(),
+    fetchSameBrand(product.id, product.brand),
   ]);
   const lowest = offers[0];
   const storesWithPrice = new Set(offers.map((o) => o.store_id));
@@ -95,6 +103,7 @@ export default async function ProductPage({ params }: PageProps<"/p/[slug]">) {
               key={`${offer.store_id}-${offer.price_type}`}
               offer={offer}
               highlighted={idx === 0}
+              now={now}
             />
           ))}
         </ul>
@@ -107,6 +116,8 @@ export default async function ProductPage({ params }: PageProps<"/p/[slug]">) {
         </p>
       )}
 
+      <SameBrandList brand={product.brand} items={sameBrand} />
+
       <PriceSparkline points={history} />
 
       {offers.length > 0 && (
@@ -118,7 +129,15 @@ export default async function ProductPage({ params }: PageProps<"/p/[slug]">) {
   );
 }
 
-function OfferRow({ offer, highlighted }: { offer: StoreOffer; highlighted: boolean }) {
+function OfferRow({
+  offer,
+  highlighted,
+  now,
+}: {
+  offer: StoreOffer;
+  highlighted: boolean;
+  now: number;
+}) {
   const discount = discountPercent(offer.price_czk, offer.regular_czk);
   const promoLabel = formatPromoTo(offer.promo_to);
   const isLoyalty = offer.price_type === "loyalty";
@@ -141,12 +160,20 @@ function OfferRow({ offer, highlighted }: { offer: StoreOffer; highlighted: bool
         : promoLabel
           ? `Akce · ${promoLabel}`
           : "Akce";
+  // Tesco is refreshed one listing per run, so its prices can be days old.
+  const observed = new Date(offer.observed_at);
+  const showObserved =
+    offer.price_source !== "leaflet_regular" &&
+    now - observed.getTime() > STALE_AFTER_MS;
+  const fullSubtitle = showObserved
+    ? `${subtitle} · ověřeno ${formatObservedDate(offer.observed_at)}`
+    : subtitle;
 
   const content = (
     <div className={`flex items-center justify-between gap-3 p-3 ${highlighted ? "bg-amber-50" : ""}`}>
       <div className="min-w-0">
         <div className="font-medium capitalize text-neutral-900">{offer.name}</div>
-        <div className="text-xs text-neutral-600">{subtitle}</div>
+        <div className="text-xs text-neutral-600">{fullSubtitle}</div>
       </div>
       <div className="flex shrink-0 flex-col items-end">
         <div className={`text-base font-bold ${priceClass}`}>

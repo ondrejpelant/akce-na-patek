@@ -41,11 +41,21 @@ STORE_CODE = "tesco"
 BASE_URL = "https://nakup.itesco.cz"
 CATEGORY_PATH = "/shop/cs-CZ/browse/napoje/lihoviny"
 PAGE_SIZE = 48
-MAX_PAGES = 20  # hard safety cap; the current category is 346 items / 48 per page ≈ 8
+
+# Tesco answers 403 to the second page in a session, so each run loads exactly
+# one page (48 items) and the next run takes the next listing from this
+# rotation. Over successive updates that walks most of the 346 spirits without
+# ever requesting more than one page per run. ("" = the whole spirits listing.)
+LISTINGS = (
+    "", "vodka", "gin", "whisky-bourbon-a-jine-destilaty", "rum-likery-a-elixiry",
+    "likery-a-medovina", "konak", "brandy", "tequila", "borovicka",
+    "ovocne-destilaty", "tuzemak", "ostatni-lihoviny",
+)
+SORTS = ("relevance", "price-ascending", "price-descending")
+ROTATION = tuple((listing, sort) for sort in SORTS for listing in LISTINGS)
 
 _PRICE_RE = re.compile(r"(\d+)[,.](\d{1,2})")
 # Pagination: "Zobrazeno 1 až 24 z 346 produktů".
-_TOTAL_RE = re.compile(r"z\s+(\d+)\s+produk")
 _DATE_RE = re.compile(r"(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})")
 
 
@@ -71,32 +81,28 @@ class Tesco(Source):
                 locale="cs-CZ", viewport={"width": 1366, "height": 900}
             )
             page = context.new_page()
+            step = _next_rotation_step()
+            listing, sort = ROTATION[step]
             try:
-                html = self._load_page(page, 1)
-                total_pages = _total_pages(html)
-                log.info("tesco: paginating %d page(s), %d items/page", total_pages, PAGE_SIZE)
-                yield from parse_tiles(html)
-                for page_no in range(2, total_pages + 1):
-                    try:
-                        html = self._load_page(page, page_no)
-                    except BlockedError as exc:
-                        # Per 07 Provoz/Právní a etické zásady §4 we stop here
-                        # and keep what we have; no retries, no workarounds.
-                        self.partial_reason = (
-                            f"stránka {page_no}/{total_pages} odmítnuta ({exc}); "
-                            f"uloženo jen {page_no - 1}"
-                        )
-                        log.warning("tesco: %s", self.partial_reason)
-                        break
-                    yield from parse_tiles(html)
+                # BlockedError on this single page propagates -> run 'failed'.
+                html = self._load_page(page, listing, sort)
             finally:
                 context.close()
                 browser.close()
 
-    def _load_page(self, page, page_no: int) -> str:
+        _save_rotation_step(step + 1)
+        # partial = SCD2 keeps prices of the items this run did not look at.
+        self.partial_reason = (
+            f"výpis {step + 1}/{len(ROTATION)}: {listing or 'lihoviny'} · {sort}"
+            f" (1 stránka za běh)"
+        )
+        log.info("tesco: %s", self.partial_reason)
+        yield from parse_tiles(html)
+
+    def _load_page(self, page, listing: str, sort: str) -> str:
         # The shop keeps firing analytics beacons, so "networkidle" never
         # settles; wait for DOM + the price element instead.
-        resp = page.goto(self._page_url(page_no), wait_until="domcontentloaded", timeout=30_000)
+        resp = page.goto(page_url(listing, sort), wait_until="domcontentloaded", timeout=30_000)
         if resp is not None and resp.status in (401, 403, 429):
             raise BlockedError(f"HTTP {resp.status}")
         try:
@@ -105,30 +111,37 @@ class Tesco(Source):
                 timeout=15_000,
             )
         except Exception:
-            log.warning("tesco: price module did not render on page %d", page_no)
-        # Same politeness as HttpClient: at most 1 request / 2 s.
-        page.wait_for_timeout(2_000)
+            log.warning("tesco: price module did not render on %s", listing or "lihoviny")
         return page.content()
 
-    @staticmethod
-    def _page_url(page_no: int) -> str:
-        return f"{BASE_URL}{CATEGORY_PATH}?sortBy=relevance&page={page_no}&count={PAGE_SIZE}"
+
+def page_url(listing: str, sort: str) -> str:
+    path = f"{CATEGORY_PATH}/{listing}" if listing else CATEGORY_PATH
+    return f"{BASE_URL}{path}?sortBy={sort}&count={PAGE_SIZE}"
+
+
+def _rotation_file():
+    from scraper.config import SCRAPER_ROOT
+
+    return SCRAPER_ROOT / ".cache" / "tesco_rotation.txt"
+
+
+def _next_rotation_step() -> int:
+    try:
+        return int(_rotation_file().read_text().strip()) % len(ROTATION)
+    except (OSError, ValueError):
+        return 0
+
+
+def _save_rotation_step(step: int) -> None:
+    path = _rotation_file()
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(str(step % len(ROTATION)))
 
 
 # ---------------------------------------------------------------------------
 # HTML parsing — called straight from fixture-backed tests.
 # ---------------------------------------------------------------------------
-
-
-def _total_pages(html: str) -> int:
-    node = HTMLParser(html).css_first(".ddsweb-pagination__results")
-    text = (node.text() if node else html).replace("\xa0", " ").replace("&nbsp;", " ")
-    m = _TOTAL_RE.search(text)
-    if not m:
-        log.warning("tesco: pagination total not found, scraping page 1 only")
-        return 1
-    pages = -(-int(m.group(1)) // PAGE_SIZE)  # ceil
-    return min(pages, MAX_PAGES)
 
 
 def parse_tiles(html: str) -> Iterator[ScrapedItem]:

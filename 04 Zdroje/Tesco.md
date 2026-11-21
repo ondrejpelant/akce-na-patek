@@ -41,7 +41,8 @@ Mapování na `ScrapedItem`:
 - Výsledek: **~48 produktů / ~70 cen** na běh (první stránka podle relevance = nejprodávanější lihoviny), ze 346.
 - Prohlížeč: systémový **Microsoft Edge** (`PLAYWRIGHT_CHANNEL=msedge`, default). Přibalený „Chrome for Testing" (chromium-1255) na Ondrově PC padá na Windows side-by-side chybě („Závislé sestavení 159.0.8154.6 nelze najít") i po `playwright install --force`.
 - Okno prohlížeče je viditelné (default); `TESCO_HEADLESS=1` přepne do headless, ale tam se ceny nevyrenderují.
-- Možnosti, jak pokrytí legitimně zvýšit, až bude potřeba: řazení `sortBy=price-ascending` místo relevance (jiných 48 produktů — nejlevnější), nebo ruční `add-price` pro konkrétní lahve. Rotace kategorií/opakované pokusy po 403 NE.
+- **Rotace výpisů (od 21. 11. 16:15):** každý běh načte **přesně jednu stránku** (48 položek) a druhou už nezkouší. Další běh vezme další výpis z rotace 13 výpisů (celé lihoviny + podkategorie vodka, gin, whisky-bourbon…, rum-likery-a-elixiry, likery-a-medovina, konak, brandy, tequila, borovicka, ovocne-destilaty, tuzemak, ostatni-lihoviny) × 3 řazení (relevance, price-ascending, price-descending) = 39 kroků. Stav v `scraper/.cache/tesco_rotation.txt` (mimo git). Bez `--force` se Tesco stáhne nejvýš 1× denně → 1 stránka denně. Běh je vždy `partial`, takže ceny z jiných výpisů zůstávají (u starších web ukazuje „ověřeno DD. M.").
+- Opakované pokusy po 403 ani nové session kvůli další stránce v témž běhu NE.
 
 ## Rozhodnutí po spike
 - **Zařadit — P1, runner: PC, technika: Playwright (systémový Edge)** (`needs_browser = True` v `sources/tesco.py`). Viz „Realita po M5" výše — reálně jen 1. stránka.
