@@ -54,7 +54,6 @@ class HttpClient:
             headers={"User-Agent": user_agent, "Accept-Language": "cs,en;q=0.5"},
             timeout=timeout_s,
             follow_redirects=True,
-            http2=True,
         )
         self._limiter = RateLimiter(rate_limit_rps)
         self._max_retries = max_retries

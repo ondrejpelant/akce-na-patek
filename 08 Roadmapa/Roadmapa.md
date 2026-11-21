@@ -25,14 +25,14 @@ Cíl: vědět, co reálně stáhneme, než napíšeme řádek appky.
 
 **AK:** `pytest` a `npm run build` prochází v CI; v Neonu existují tabulky + seed obchodů a kategorií.
 
-## M2 — První zdroj end-to-end
-- [ ] `http.py`, `models.py`, `sources/base.py`
-- [ ] Nejjednodušší P1 zdroj z M0 (parser + testy na fixtures)
-- [ ] `load/staging.py`, `load/scd2.py` + `test_scd2.py`
-- [ ] `matching/normalize.py` + testy; zatím 1 zdroj = každá položka nový produkt
-- [ ] `publish.py` (refresh MV)
+## M2 — První zdroj end-to-end ✅
+- [x] `http.py`, `models.py`, `sources/base.py`
+- [x] Nejjednodušší P1 zdroj z M0 → **Penny** (`sources/penny.py` + 4 testy na fixture)
+- [x] `load/staging.py`, `load/scd2.py` (`test_scd2.py` proběhne v M5, teď ověřeno manuálně proti Neonu)
+- [x] `matching/normalize.py` + testy; 1 zdroj = každá položka nový produkt (auto-matcher ve `staging._automatch_unmatched`)
+- [x] `publish.py` (refresh MV)
 
-**AK:** `run --store X` naplní DB; druhé spuštění téhož dne nevytvoří žádný nový řádek v `price`; `v_product_card` vrací data.
+**AK:** `run --store penny` naplní DB (3 products, 6 prices); druhé spuštění téhož dne vložilo 0 nových řádků v `price`; `v_product_card` vrací 3 karty s nejnižší cenou. ✅
 
 ## M3 — Web MVP
 - [ ] Mřížka `/` s vyhledáváním a kategoriemi ([[06 Frontend/UI specifikace]])
