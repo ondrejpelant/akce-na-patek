@@ -58,6 +58,7 @@ _ABBREV_EXPANSIONS = {
 _HERE = Path(__file__).parent
 _BRANDS_PATH = _HERE / "brands.yaml"
 _CATEGORY_RULES_PATH = _HERE / "category_rules.yaml"
+_SOURCE_CATEGORIES_PATH = _HERE / "source_categories.yaml"
 
 
 # ---------------------------------------------------------------------------
@@ -75,6 +76,8 @@ class Candidate:
     abv: float | None
     ean: str | None
     source_kind: str  # 'catalog' | 'leaflet'
+    store_code: str | None = None
+    source_category: str | None = None  # store's own category path, if any
 
 
 @dataclass
@@ -154,7 +157,8 @@ def _match_one(
         break  # candidates are sorted descending; nothing better can follow
 
     # 5) no match → new product
-    category_id = cat_by_slug.get(_category_for(c.raw_name, rules), default_cat)
+    slug = resolve_category(c.raw_name, c.store_code, c.source_category, rules=rules)
+    category_id = cat_by_slug.get(slug, default_cat)
     pid = _create_product(cur, category_id=category_id, brand=brand, name=name,
                           volume_ml=volume, abv=c.abv or parsed.abv)
     _link_only(cur, c.store_product_id, pid)
@@ -374,6 +378,45 @@ def _contains_token(haystack: str, needle: str) -> bool:
     return bool(re.search(rf"(?<![\w]){re.escape(needle)}(?![\w])", haystack))
 
 
+def resolve_category(
+    raw_name: str,
+    store_code: str | None,
+    source_category: str | None,
+    *,
+    rules: list[tuple[str, list[str]]] | None = None,
+) -> str:
+    """Name keywords first (editorial), then the store's own category tree,
+    then the default."""
+    slug = _category_for(raw_name, rules if rules is not None else _load_category_rules())
+    if slug != DEFAULT_CATEGORY_SLUG:
+        return slug
+    return _category_from_source(store_code, source_category) or DEFAULT_CATEGORY_SLUG
+
+
+def _category_from_source(store_code: str | None, path: str | None) -> str | None:
+    """Longest whole-segment prefix of `path` found in source_categories.yaml."""
+    if not store_code or not path:
+        return None
+    mapping = _load_source_categories().get(store_code, {})
+    segments = path.strip("/").split("/")
+    for n in range(len(segments), 0, -1):
+        slug = mapping.get("/".join(segments[:n]))
+        if slug:
+            return slug
+    return None
+
+
+_source_cats_cache: dict[str, dict[str, str]] | None = None
+
+
+def _load_source_categories() -> dict[str, dict[str, str]]:
+    global _source_cats_cache
+    if _source_cats_cache is None:
+        data = yaml.safe_load(_SOURCE_CATEGORIES_PATH.read_text(encoding="utf-8")) or {}
+        _source_cats_cache = {store: dict(m or {}) for store, m in data.items()}
+    return _source_cats_cache
+
+
 def _category_for(raw_name: str, rules: list[tuple[str, list[str]]]) -> str:
     text = f_norm(raw_name)
     for slug, keywords in rules:
@@ -414,6 +457,7 @@ def _slugify(text: str) -> str:
 
 # Testing hook — keep private tests from bleeding global state.
 def _clear_cache_for_tests() -> None:
-    global _brands_cache, _rules_cache
+    global _brands_cache, _rules_cache, _source_cats_cache
     _brands_cache = None
     _rules_cache = None
+    _source_cats_cache = None

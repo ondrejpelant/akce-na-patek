@@ -1,0 +1,23 @@
+# Převod kategorie zdroje → naše kategorie (03 Data/Kategorie.md).
+# Klíč = cesta v kategoriích obchodu (u Tesca část URL za /browse/napoje/lihoviny/).
+# Vyhrává nejdelší shoda po celých segmentech; neznámá cesta → rozhodnou klíčová
+# slova v názvu (category_rules.yaml), pak „ostatni".
+# Klíčová slova v názvu mají přednost před touto tabulkou.
+
+tesco:
+  vodka: vodka
+  gin: gin
+  whisky-bourbon-a-jine-destilaty: whisky
+  konak: brandy
+  brandy: brandy
+  tequila: tequila
+  likery-a-medovina: likery
+  likery-a-medovina/bylinne-likery: bylinne
+  rum-likery-a-elixiry: rum
+  rum-likery-a-elixiry/likery-a-elixiry: likery
+  rum-likery-a-elixiry/ostatni-lihoviny: ostatni
+  borovicka: palenky
+  ovocne-destilaty: palenky
+  tuzemak: palenky
+  ostatni-lihoviny: ostatni
+  koktejly-a-michane-napoje: ostatni

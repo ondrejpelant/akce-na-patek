@@ -1,13 +1,16 @@
-# Pravidla pro přiřazení kategorie u letákových položek (nemají strom kategorií).
-# První shoda vyhrává. Klíčová slova jsou lowercased bez diakritiky; matchuje se přes
-# contains nad f_norm(raw_name || ' ' || brand_guess).
+# Pravidla pro přiřazení kategorie podle názvu produktu.
+# První shoda vyhrává. Klíčová slova jsou lowercased bez diakritiky a musí začínat
+# slovo (prefix): "tuzem" chytí tuzemák i tuzemský, "gin" nechytí "originál".
+# Když nic nesedí, použije se kategorie obchodu (source_categories.yaml), pak "ostatni".
+# Tuzemák v pálenkách je podle 03 Data/Kategorie.md; rum vs. pálenky je stále
+# otevřená otázka č. 8.
 
 - category: brandy
   keywords: [cognac, konak, brandy, metaxa, armagnac]
 - category: bylinne
   keywords: [becherovka, jagermeister, fernet, bylinny]
 - category: palenky
-  keywords: [slivovice, hruskovice, merunkovice, borovicka, tuzemak]
+  keywords: [slivovice, hruskovice, merunkovice, borovicka, tuzem]
 - category: tequila
   keywords: [tequila, mezcal]
 - category: rum

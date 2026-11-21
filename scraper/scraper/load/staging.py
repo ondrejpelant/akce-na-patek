@@ -132,12 +132,23 @@ def match_unmatched(conn, store_id: int) -> int:
     not count; it stays unmatched until a human reviews it).
     """
     with conn.cursor() as cur:
+        # The store's own category is not a store_product column; take it from
+        # the newest staged payload (stg_listing keeps 14 days). Older items
+        # fall back to name keywords.
         cur.execute(
             """
-            select id, raw_name, volume_ml, abv, ean, source_kind
-            from store_product
-            where store_id = %s and product_id is null
-            for update
+            select sp.id, sp.raw_name, sp.volume_ml, sp.abv, sp.ean, sp.source_kind,
+                   s.code,
+                   (select st.payload ->> 'source_category'
+                    from stg_listing st
+                    join scrape_run r on r.id = st.scrape_run_id
+                    where r.store_id = sp.store_id and st.store_sku = sp.store_sku
+                    order by st.id desc
+                    limit 1) as source_category
+            from store_product sp
+            join store s on s.id = sp.store_id
+            where sp.store_id = %s and sp.product_id is null
+            for update of sp
             """,
             (store_id,),
         )
@@ -151,6 +162,8 @@ def match_unmatched(conn, store_id: int) -> int:
             abv=float(row[3]) if row[3] is not None else None,
             ean=row[4],
             source_kind=row[5],
+            store_code=row[6],
+            source_category=row[7],
         )
         for row in rows
     ]

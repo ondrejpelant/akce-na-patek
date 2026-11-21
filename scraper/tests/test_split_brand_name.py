@@ -47,6 +47,29 @@ def test_category_keyword_must_start_a_word(raw, category):
     assert _category_for(raw, _load_category_rules()) == category
 
 
+@pytest.mark.parametrize(
+    "raw,store,path,category",
+    [
+        # name keyword wins over the store tree
+        ("Božkov Vodka 0,5l", "tesco", "rum-likery-a-elixiry/ostatni-lihoviny", "vodka"),
+        ("Božkov Originál Tuzemský 0,5l", "tesco", "rum-likery-a-elixiry/likery-a-elixiry", "palenky"),
+        # no keyword in the name -> store tree, longest matching prefix
+        ("Beefeater Strawberry Pink 0,7l", "tesco", "gin/gin", "gin"),
+        ("Grant's Triple Wood 0,7l", "tesco", "whisky-bourbon-a-jine-destilaty/skotska-whisky", "whisky"),
+        ("Jägermeister 0,7l", "tesco", "likery-a-medovina/bylinne-likery", "bylinne"),
+        ("Božkov Speciál medový 0,5l", "tesco", "rum-likery-a-elixiry/likery-a-elixiry", "likery"),
+        ("Legendario Elixir de Cuba 0,7l", "tesco", "rum-likery-a-elixiry", "rum"),
+        # unknown path / no store category -> default
+        ("Heffron Single Malt 0,7l", "tesco", "neco-noveho", "ostatni"),
+        ("Heffron Single Malt 0,7l", None, None, "ostatni"),
+    ],
+)
+def test_resolve_category(raw, store, path, category):
+    from scraper.matching.matcher import resolve_category
+
+    assert resolve_category(raw, store, path) == category
+
+
 def test_unknown_brand_takes_first_two_words():
     assert split_brand_name("Heffron Single Malt 0,7l") == ("Heffron Single", "Malt")
     assert split_brand_name("Heffron 0,7l") == ("Heffron", "")

@@ -182,6 +182,7 @@ def _tile_items(tile: Node) -> Iterator[ScrapedItem]:
         abv=parsed.abv,
         url=url,
         image_url=image_url,
+        source_category=_source_category(tile),
         source_kind="catalog",
         raw={"testid": store_sku},
     )
@@ -208,6 +209,21 @@ def _tile_items(tile: Node) -> Iterator[ScrapedItem]:
         promo_from=date.today(),
         promo_to=promo_to,
     )
+
+
+def _source_category(tile: Node) -> str | None:
+    """Tesco subcategory path from the tile's "Více z kategorie" link,
+    e.g. ".../browse/napoje/lihoviny/vodka/cista-vodka" -> "vodka/cista-vodka"."""
+    link = tile.css_first("a.online-components-product-tile-rest-of-shelf__rest-of-shelf")
+    href = link.attributes.get("href") if link else None
+    if not href:
+        return None
+    marker = f"{CATEGORY_PATH}/"
+    idx = href.find(marker)
+    if idx < 0:
+        return None
+    path = href[idx + len(marker):].split("?", 1)[0].strip("/")
+    return path.removesuffix("/all") or None
 
 
 def _parse_clubcard(container: Node, regular_price: Decimal) -> tuple[Decimal, date | None] | None:

@@ -59,6 +59,11 @@ def test_bozkov_clubcard(items):
     assert it.promo_to == date(2026, 11, 24)
 
 
+def test_source_category_from_rest_of_shelf_link(items):
+    assert _by(items, "205119917", "regular").source_category == "rum-likery-a-elixiry/likery-a-elixiry"
+    assert _by(items, "212270700", "regular").source_category == "likery-a-medovina/kremove-likery"
+
+
 def test_vajecny_liker_regular(items):
     it = _by(items, "212270700", "regular")
     assert it.volume_ml == 500

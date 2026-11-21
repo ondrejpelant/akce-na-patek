@@ -1,6 +1,14 @@
 # Kategorie
 
-Seed data — `db/migrations/003_seed.sql`. Kategorie se přiřazuje z kategorie zdroje (Tesco/Billa mají strom kategorií) a u letáků klíčovými slovy (`category_rules.yaml`).
+Seed data — `db/migrations/003_seed.sql`.
+
+## Jak se kategorie přiřazuje (od 21. 11. 2026)
+Pořadí (`matcher.resolve_category`):
+1. **Klíčové slovo v názvu** — `scraper/scraper/matching/category_rules.yaml`. Slovo musí začínat slovo (prefix): `tuzem` chytí tuzemák i tuzemský, `gin` nechytí „originál".
+2. **Kategorie obchodu** — `scraper/scraper/matching/source_categories.yaml` (zatím Tesco: cesta z odkazu „Více z kategorie" na kartě, např. `whisky-bourbon-a-jine-destilaty/skotska-whisky` → `whisky`). Vyhrává nejdelší shoda po segmentech.
+3. Jinak `ostatni`.
+
+Kategorie obchodu se nečte z DB kolonky, ale z posledního záznamu položky ve `stg_listing` (retence 14 dní). Při `rematch` starších položek se tedy použijí jen klíčová slova. Po zavedení: v „Ostatní" zůstaly 2 karty ze 42 (dřív 13).
 
 | sort | slug | Název | Klíčová slova (příklady) |
 |---|---|---|---|
