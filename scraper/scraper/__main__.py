@@ -217,16 +217,53 @@ def run(
 def match() -> None:
     """Re-run auto-matching for every unmatched store_product."""
     cfg = Config.from_env()
-    from scraper.load.staging import _automatch_unmatched
+    with _connect(cfg) as conn:
+        total = _match_all_stores(conn)
+        conn.commit()
+        refresh_materialized_view(conn)
+    console.print(f"[green]matched {total} store_products[/]")
 
-    with _connect(cfg) as conn, conn.cursor() as cur:
+
+@app.command()
+def rematch(
+    yes: bool = typer.Option(False, "--yes", help="Neptat se na potvrzení"),
+) -> None:
+    """Smaže všechny produkty a spáruje položky obchodů znovu od nuly.
+
+    Použij po změně brands.yaml nebo pravidel párování. Ceny zůstanou (visí na
+    položkách obchodů), ale produkty dostanou nová ID a slugy, takže staré
+    odkazy /p/<slug> přestanou fungovat. Ručně potvrzené páry z `review` se
+    ztratí.
+    """
+    cfg = Config.from_env()
+    with _connect(cfg) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select count(*) from product")
+            n_products = cur.fetchone()[0]
+        if not yes and not typer.confirm(
+            f"Smazat {n_products} produktů a spárovat znovu?", default=False
+        ):
+            raise typer.Exit(code=1)
+        with conn.cursor() as cur:
+            cur.execute("delete from match_candidate")
+            cur.execute("update store_product set product_id = null")
+            cur.execute("delete from product")
+        total = _match_all_stores(conn)
+        conn.commit()
+        refresh_materialized_view(conn)
+        with conn.cursor() as cur:
+            cur.execute("select count(*) from product")
+            after = cur.fetchone()[0]
+    console.print(f"[green]rematch: {n_products} → {after} produktů, spárováno {total} položek[/]")
+
+
+def _match_all_stores(conn) -> int:
+    from scraper.load.staging import match_unmatched
+
+    with conn.cursor() as cur:
         cur.execute("select id from store")
         store_ids = [row[0] for row in cur.fetchall()]
-        total = 0
-        for sid in store_ids:
-            total += _automatch_unmatched(conn, sid)
-        conn.commit()
-    console.print(f"[green]matched {total} store_products[/]")
+    return sum(match_unmatched(conn, sid) for sid in store_ids)
 
 
 @app.command()

@@ -95,3 +95,14 @@ def parse(raw_name: str) -> Parsed:
     clean = re.sub(r"\s+", " ", clean).strip(" -,.()[]")
 
     return Parsed(volume_ml=volume_ml, abv=abv, is_multipack=is_multipack, clean_name=clean)
+
+
+def display_name(raw_name: str) -> str:
+    """Same removals as parse().clean_name (volume, ABV, multipack, noise) but
+    keeps the original casing and diacritics — this is what the web shows."""
+    s = _VOLUME_RE.sub(" ", raw_name)
+    s = _ABV_RE.sub(" ", s)
+    s = _MULTIPACK_RE.sub(" ", s)
+    for w in _NOISE_WORDS:
+        s = re.sub(re.escape(w), " ", s, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", s).strip(" -,.()[]")

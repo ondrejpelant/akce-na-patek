@@ -50,3 +50,4 @@ Neběží automaticky. Ondra ji spouští ručně před nákupem: dvojklik na `a
 - `aktualizuj.bat` — plná aktualizace (`--store X`, `--force`, `review`, `add-price`)
 - `cd scraper && uv run python -m scraper run --store tesco --dry-run` — test scraperu bez zápisu do DB
 - `cd scraper && uv run pytest`
+- `cd scraper && uv run python -m scraper rematch` — po změně `brands.yaml`/pravidel párování: smaže produkty a spáruje znovu (mění slugy, maže výsledky `review`)

@@ -25,7 +25,7 @@ from typing import Any
 import yaml
 from rapidfuzz import fuzz
 
-from scraper.matching.normalize import f_norm
+from scraper.matching.normalize import display_name, f_norm
 from scraper.matching.normalize import parse as parse_name
 
 log = logging.getLogger(__name__)
@@ -129,8 +129,7 @@ def _match_one(
         return MatchOutcome(c.store_product_id, None, "skip",
                             reason="no volume" if volume is None else "multipack")
 
-    brand = _detect_brand(parsed.clean_name, brands) or _fallback_brand(parsed.clean_name)
-    name = _strip_brand(parsed.clean_name, brand, brands) or parsed.clean_name
+    brand, name = split_brand_name(c.raw_name, brands)
 
     # 1) EAN
     if c.ean:
@@ -189,7 +188,9 @@ def _score_candidates(
     rows: list[tuple[int, str]] = cur.fetchall()
     scored: list[tuple[int, str, float]] = []
     for pid, candidate_name in rows:
-        score = float(fuzz.token_set_ratio(name, match_norm(candidate_name)))
+        other = match_norm(candidate_name)
+        # rapidfuzz scores two empty strings 0; for us "brand only" == "brand only".
+        score = 100.0 if not name and not other else float(fuzz.token_set_ratio(name, other))
         scored.append((pid, candidate_name, score))
     scored.sort(key=lambda t: t[2], reverse=True)
     return scored
@@ -305,6 +306,46 @@ def _detect_brand(clean_name: str, brands: list[tuple[str, list[str]]]) -> str |
     return None
 
 
+def split_brand_name(
+    raw_name: str, brands: list[tuple[str, list[str]]] | None = None
+) -> tuple[str, str]:
+    """Split a raw store name into (brand, name) for storage on `product`.
+
+    Both keep the original casing and diacritics; matching always compares
+    them through match_norm(), so display form does not affect scoring.
+    Known brand -> its canonical spelling from brands.yaml, removed from the
+    name wherever it appears ("Vodka jemná 37,5% Královská palírna" ->
+    ("Královská palírna", "Vodka jemná")). Unknown brand -> the first two
+    words of the name.
+    """
+    brands = brands if brands is not None else _load_brands()
+    display = display_name(raw_name)
+    detected = _detect_brand(f_norm(display), brands)
+    tokens = display.split()
+    # The name may end up empty ("Jägermeister 0,7l") — the web renders
+    # "{brand} {name}", so repeating the brand there would show it twice.
+    if detected:
+        rest = _remove_alias_tokens(tokens, _aliases_of(detected, brands))
+        return detected, " ".join(rest).strip(" -,.()")
+    brand = " ".join(tokens[:2]) or "Neznámá"
+    return brand, " ".join(tokens[2:]).strip(" -,.()")
+
+
+def _remove_alias_tokens(tokens: list[str], aliases: list[str]) -> list[str]:
+    """Drop the first token span whose normalised form equals one of the
+    aliases (longest alias first). Works on display tokens, so "D.E.W." and
+    "Božkov" are matched diacritic- and punctuation-insensitively."""
+    for alias in aliases:
+        for i in range(len(tokens)):
+            for j in range(i + 1, len(tokens) + 1):
+                joined = _norm_alias(" ".join(tokens[i:j]))
+                if joined == alias:
+                    return tokens[:i] + tokens[j:]
+                if len(joined) > len(alias):
+                    break
+    return tokens
+
+
 def _fallback_brand(clean_name: str) -> str:
     parts = [w for w in re.split(r"\s+", clean_name) if w]
     head = " ".join(parts[:2]) if parts else "Neznámá"
@@ -337,7 +378,9 @@ def _category_for(raw_name: str, rules: list[tuple[str, list[str]]]) -> str:
     text = f_norm(raw_name)
     for slug, keywords in rules:
         for kw in keywords:
-            if kw in text:
+            # Keyword must start a word ("gin" must not hit "original"), but may
+            # continue ("liker" matches "likerem", "rum" matches "rumovy").
+            if re.search(rf"(?<!\w){re.escape(kw)}", text):
                 return slug
     return DEFAULT_CATEGORY_SLUG
 
