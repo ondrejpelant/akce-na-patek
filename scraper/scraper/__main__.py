@@ -140,7 +140,8 @@ def run(
     _setup_logging(verbose)
 
     # ensure source modules register themselves
-    import scraper.sources.penny  # noqa: F401
+    import scraper.sources.penny
+    import scraper.sources.tesco  # noqa: F401
 
     if store not in REGISTRY:
         console.print(f"[red]Neznámý obchod: {store}. Známé: {sorted(REGISTRY)}[/]")
@@ -229,7 +230,105 @@ def publish() -> None:
 
 @app.command()
 def review() -> None:
-    console.print("[yellow]review: not yet implemented (M5)[/]")
+    """Interactive review of pending match_candidate rows.
+
+    For each pending candidate the CLI prints both sides (store_product vs.
+    product), the fuzzy score, and prompts:
+      a = accept the suggestion (link store_product -> product)
+      r = reject this candidate (same pair never comes up again)
+      n = new product (the store_product gets a fresh product_id)
+      s = skip for now (leave as pending)
+      q = quit
+    """
+    cfg = Config.from_env()
+    with _connect(cfg) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            select mc.store_product_id, mc.product_id, mc.score, mc.method,
+                   sp.raw_name, sp.volume_ml, s.name as store_name,
+                   p.brand, p.name, p.volume_ml, p.abv
+            from match_candidate mc
+            join store_product sp on sp.id = mc.store_product_id
+            join store s          on s.id = sp.store_id
+            join product p        on p.id = mc.product_id
+            where mc.status = 'pending' and sp.product_id is null
+            order by mc.score desc
+            """
+        )
+        rows = cur.fetchall()
+
+        if not rows:
+            console.print("[green]Žádné pending kandidáti.[/]")
+            return
+
+        console.print(f"[bold]{len(rows)} pending kandidát(ů)[/]")
+        for (sp_id, p_id, score, method, raw_name, sp_vol, store_name,
+             brand, name, p_vol, p_abv) in rows:
+            console.print()
+            console.print(f"[dim]--- skóre {score:.1f} ({method}) ---[/]")
+            console.print(f"  [bold]{store_name}[/]: {raw_name} ({sp_vol} ml)")
+            console.print(f"  [bold]product[/]:    {brand} {name} ({p_vol} ml{', ' + str(p_abv) + ' %' if p_abv else ''})")
+            choice = typer.prompt("a/r/n/s/q", default="s").strip().lower()
+            if choice == "q":
+                break
+            if choice == "a":
+                cur.execute(
+                    "update store_product set product_id = %s where id = %s",
+                    (p_id, sp_id),
+                )
+                cur.execute(
+                    "update match_candidate set status = 'accepted' "
+                    "where store_product_id = %s and product_id = %s",
+                    (sp_id, p_id),
+                )
+                console.print("[green]accepted[/]")
+            elif choice == "r":
+                cur.execute(
+                    "update match_candidate set status = 'rejected' "
+                    "where store_product_id = %s and product_id = %s",
+                    (sp_id, p_id),
+                )
+                console.print("[yellow]rejected[/]")
+            elif choice == "n":
+                from scraper.matching.matcher import _category_id_by_slug
+
+                cat_by_slug = _category_id_by_slug(conn)
+                cur.execute(
+                    """
+                    select category_id from product where id = %s
+                    """,
+                    (p_id,),
+                )
+                category_id = cur.fetchone()[0] or next(iter(cat_by_slug.values()))
+                cur.execute(
+                    """
+                    insert into product (category_id, brand, name, volume_ml, abv, slug)
+                    values (%s, %s, %s, %s, null,
+                            %s)
+                    returning id
+                    """,
+                    (
+                        category_id,
+                        brand,
+                        f"{name} (varianta {sp_id})",
+                        sp_vol,
+                        f"{brand}-{name}-{sp_vol}ml-v{sp_id}".lower().replace(" ", "-"),
+                    ),
+                )
+                new_pid = cur.fetchone()[0]
+                cur.execute(
+                    "update store_product set product_id = %s where id = %s",
+                    (new_pid, sp_id),
+                )
+                cur.execute(
+                    "update match_candidate set status = 'rejected' "
+                    "where store_product_id = %s and product_id = %s",
+                    (sp_id, p_id),
+                )
+                console.print(f"[green]new product id={new_pid}[/]")
+            else:
+                console.print("[dim]skipped[/]")
+            conn.commit()
 
 
 @app.command(name="add-price")

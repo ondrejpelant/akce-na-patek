@@ -1,27 +1,40 @@
-# Seed značek (postupně rozšiřuj). Levá strana = kanonická značka,
-# aliases = další zápisy, které se mají na ni mapovat (lowercased, bez diakritiky).
+# Katalog značek pro párování produktů.
+# Levá strana = kanonická značka; aliases = ekvivalenty (lowercased, bez diakritiky).
 # Viz 03 Data/Párování produktů.md.
+#
+# Pořadí NEMATTEEruje — matcher si je setřídí od nejdelší po nejkratší, aby
+# "Captain Morgan Spiced Gold" vyhrál nad "Captain Morgan".
 
+# --- vodka ---
 - name: Finlandia
 - name: Absolut
-- name: Bozkov
-  aliases: [božkov]
-- name: Tullamore D.E.W.
-  aliases: [tullamore dew, tullamore]
-- name: Jameson
-- name: Jägermeister
-  aliases: [jagermeister, jagr]
-- name: Becherovka
+- name: Smirnoff
+- name: Amundsen
+- name: Nemiroff
+- name: Russian Standard
+  aliases: [russkij standart]
+- name: Grey Goose
+- name: Stolichnaya
+- name: Khortytsa
+  aliases: [khortitsa]
+
+# --- rum ---
+- name: Božkov
+  aliases: [bozkov]
+- name: Captain Morgan Spiced Gold
+  aliases: [captain morgan spiced]
 - name: Captain Morgan
 - name: Bacardi
-- name: Metaxa
-- name: Hennessy
-- name: Rémy Martin
-  aliases: [remy martin]
-- name: Jelínek
-  aliases: [jelinek, r. jelinek, rudolf jelinek]
-- name: Tatratea
-- name: Smirnoff
+- name: Havana Club
+- name: Don Papa
+- name: Legendario
+- name: Diplomatico
+
+# --- whisky ---
+- name: Tullamore D.E.W.
+  aliases: [tullamore dew, tullamore d. e. w.]
+- name: Tullamore
+- name: Jameson
 - name: Johnnie Walker
 - name: Chivas Regal
 - name: Jim Beam
@@ -29,16 +42,83 @@
   aliases: [jack daniels]
 - name: Ballantine's
   aliases: [ballantines]
-- name: Tullamore
 - name: Grant's
   aliases: [grants]
+- name: Famous Grouse
+  aliases: [the famous grouse]
+- name: Glenfiddich
+- name: Glenmorangie
+- name: Macallan
+  aliases: [the macallan]
+- name: Monkey Shoulder
+- name: Four Roses
+- name: Bulleit
+
+# --- gin ---
 - name: Beefeater
 - name: Bombay Sapphire
 - name: Gordon's
   aliases: [gordons]
-- name: Havana Club
-- name: Captain Morgan Spiced Gold
-  aliases: [captain morgan spiced]
+- name: Tanqueray
+- name: Hendrick's
+  aliases: [hendricks]
+- name: Plymouth
+
+# --- koňak / brandy ---
+- name: Metaxa
+- name: Hennessy
+- name: Rémy Martin
+  aliases: [remy martin]
+- name: Martell
+- name: Courvoisier
+- name: Camus
+- name: Vecchia Romagna
+
+# --- tequila / mezcal ---
+- name: Olmeca
+- name: José Cuervo
+  aliases: [jose cuervo]
+- name: Sierra
+- name: Don Julio
+
+# --- bylinné ---
+- name: Becherovka
+- name: Jägermeister
+  aliases: [jagermeister, jager]
 - name: Fernet Stock
+- name: Underberg
+- name: Unicum
+
+# --- likéry ---
+- name: Baileys
+- name: Kahlúa
+  aliases: [kahlua]
+- name: Amaretto Disaronno
+  aliases: [disaronno]
+- name: Cointreau
+- name: Grand Marnier
+- name: Sambuca
+- name: Malibu
+- name: Vaječný likér Božkov
+  aliases: [bozkov vajecny liker]
+
+# --- české pálenky a lihoviny ---
+- name: Jelínek
+  aliases: [jelinek, r. jelinek, rudolf jelinek]
+- name: Tatratea
 - name: Magister
-- name: Amundsen
+- name: Stará myslivecká
+  aliases: [stara myslivecka]
+- name: Nicolaus
+- name: Herold
+- name: Karlovarská Becherovka
+  aliases: [karlovarska becherovka]
+- name: Královská palírna
+  aliases: [kralovska palirna]
+- name: Svijany
+- name: Krušovice
+  aliases: [krusovice]
+
+# --- gin / jiné ---
+- name: Absinth King
+- name: Absente

@@ -22,6 +22,7 @@ from decimal import Decimal
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 from selectolax.lexbor import LexborNode as Node
 
+from scraper.matching.normalize import f_norm
 from scraper.matching.normalize import parse as normalize_name
 from scraper.models import ScrapedItem
 from scraper.sources import register
@@ -38,6 +39,22 @@ _PRICE_RE = re.compile(r"(\d+)[,.](\d{1,2})")
 _DATE_RE = re.compile(r"(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})")
 # "88442352" — store_sku is the trailing digit group of `data-product-slug`.
 _SKU_RE = re.compile(r"-(\d+)$")
+
+# Project scope is spirits only — beer, cider and (non-alcoholic) wine mix-ins
+# sometimes land in Penny's /category/alkohol-24 and must be filtered out at
+# the parser level so they never reach the DB (see 01 Zadání/Vize a rozsah.md).
+_NON_SPIRIT_KEYWORDS = (
+    "pivo",
+    "cider",
+    "cidr",
+    "lezak",     # f_norm("ležák")
+    "svetlo",    # "světlo", "světlé"
+    "nealko",
+    "sumive",    # "šumivé" — moved to M6
+    "sekt",
+    "prosecco",
+    "rioja",     # misc. wines in Penny alkohol category
+)
 
 
 @register
@@ -65,6 +82,10 @@ def _tile_items(tile: Node) -> Iterator[ScrapedItem]:
     raw_name = tile.attributes.get("data-teaser-name")
     slug = tile.attributes.get("data-product-slug")
     if not raw_name or not slug:
+        return
+
+    if _is_non_spirit(raw_name):
+        log.debug("penny: skipping non-spirit %r", raw_name)
         return
 
     store_sku = _sku_from_slug(slug)
@@ -120,6 +141,11 @@ def _tile_items(tile: Node) -> Iterator[ScrapedItem]:
             price_czk=regular_price,
             price_type="regular",
         )
+
+
+def _is_non_spirit(raw_name: str) -> bool:
+    text = f_norm(raw_name)
+    return any(kw in text for kw in _NON_SPIRIT_KEYWORDS)
 
 
 def _sku_from_slug(slug: str) -> str:

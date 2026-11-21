@@ -1,0 +1,53 @@
+name_a,name_b,should_match,note
+Finlandia Vodka 40% 0.7l,Finlandia vodka 0.7 l,TRUE,same brand name volume
+Finlandia Vodka 40% 0.7l,Finlandia Vodka 0.7 L,TRUE,case + spacing tolerant
+Finlandia Vodka 0.7l,Finlandia 0.7l,TRUE,missing word "Vodka"
+Finlandia Vodka 0.7l,Finlandia Vodka 1l,FALSE,different volume
+Finlandia Vodka 0.7l,Finlandia Vodka 0.75l,FALSE,close but not same volume (strict)
+Finlandia Vodka 700ml,Finlandia vodka 0.7 l,TRUE,ml vs l same volume
+Finlandia Vodka 700ml,Smirnoff Red 0.7l,FALSE,different brand
+Absolut Vodka 1l,Absolut 1l,TRUE,brand only + volume
+Absolut Vodka 1l,Absolut Vanilia 1l,FALSE,different flavour (sub-variant)
+Absolut Vanilia 1l,Absolut Vanilia 1 L,TRUE,case + spacing tolerant
+Jameson Irish Whiskey 0.7l,Jameson 0.7 l,TRUE,extra words
+Jameson 1l,Jameson Irish Whiskey 1l,TRUE,same symmetric
+Jameson 0.7l,Jameson Caskmates 0.7l,FALSE,different product line
+Johnnie Walker Red Label 0.7l,Johnnie Walker Red 0.7l,TRUE,partial name match
+Johnnie Walker Red Label 0.7l,Johnnie Walker Black Label 0.7l,FALSE,different label
+Jack Daniel's 0.7 l,Jack Daniels 700 ml,TRUE,apostrophe tolerant
+Jack Daniel's Honey 0.7l,Jack Daniel's 0.7l,FALSE,honey ≠ original
+Captain Morgan Spiced Gold 0.7l,Captain Morgan Spiced Gold Rum 0.7l,TRUE,extra word Rum
+Captain Morgan Spiced Gold 0.7l,Captain Morgan Black Spiced 0.7l,FALSE,different variant
+Bacardi Carta Blanca 0.7l,Bacardi Carta Negra 0.7l,FALSE,different Carta variant
+Božkov Originál Tuzemský 0.5l,Bozkov Original Tuzemsky 0.5l,TRUE,diacritics tolerant
+Božkov Originál Tuzemský 0.5l,Božkov Tuzemský Originál 0.5l,TRUE,word order tolerant
+Božkov 0.5l,Božkov Vaječný likér 0.5l,FALSE,different product
+Metaxa 7* 0.7l,Metaxa 7 hvězd 0.7l,TRUE,star vs word
+Metaxa 7* 0.7l,Metaxa 12* 0.7l,FALSE,different age grade
+Hennessy VS 0.7l,Hennessy Very Special 0.7l,TRUE,abbrev vs full
+Hennessy VS 0.7l,Hennessy VSOP 0.7l,FALSE,different age
+Becherovka 0.5l,Becherovka Original 0.5l,TRUE,optional word Original
+Becherovka Lemond 0.5l,Becherovka 0.5l,FALSE,flavour variant
+Jägermeister 0.7l,Jagermeister 0.7l,TRUE,diacritics
+Jägermeister 0.7l 35%,Jägermeister 0.7l,TRUE,ignored abv
+Tullamore D.E.W. 0.7l,Tullamore Dew 0.7l,TRUE,punctuation
+Tullamore D.E.W. 0.7l,Tullamore D.E.W. 12 years 0.7l,FALSE,different age
+Tatratea Original 0.7l,Tatratea 0.7l,TRUE,specifier Original
+Tatratea Original 0.7l,Tatratea 0.5l,FALSE,different volume
+Fernet Stock 0.5l,Fernet Stock 500ml,TRUE,ml vs l
+Fernet Stock Citrus 0.5l,Fernet Stock 0.5l,FALSE,flavoured variant
+Beefeater London Dry Gin 0.7l,Beefeater Gin 0.7l,TRUE,extra words London Dry
+Bombay Sapphire Gin 1l,Bombay Sapphire 1l,TRUE,optional word Gin
+Vodka jemná 37.5% Královská palírna 0.5l,Královská palírna Vodka jemná 0.5l,TRUE,word order+brand pos
+Tuzemák 37.5% Královská palírna 0.5l,Královská palírna Tuzemák 37.5% 0.5l,TRUE,word order+brand pos
+Baileys Original 0.7l,Baileys Irish Cream 0.7l,TRUE,synonymous descriptors
+Baileys Strawberries & Cream 0.7l,Baileys Original 0.7l,FALSE,flavoured variant
+Jameson Irish Whiskey 0.7l 40%,Jameson 0.7l,TRUE,abv optional
+Smirnoff Red Label 1l,Smirnoff Red No. 21 1l,TRUE,partial match
+Havana Club 7 Años 0.7l,Havana Club 7 Anos 0.7l,TRUE,diacritics
+Havana Club 3 Años 0.7l,Havana Club 7 Años 0.7l,FALSE,different age
+Pralinky Mozartovy koule 148g,Mozartovy koule 148g,FALSE,sweets — should never land here
+Olmeca Tequila Gold 0.7l,Olmeca Gold 0.7l,TRUE,extra Tequila word
+Olmeca Blanco 0.7l,Olmeca Gold 0.7l,FALSE,different variant
+Ballantine's Finest 0.7l,Ballantines 0.7l,TRUE,punctuation + specifier
+Glenfiddich 12 years 0.7l,Glenfiddich 12 let 0.7l,TRUE,language tolerant on age

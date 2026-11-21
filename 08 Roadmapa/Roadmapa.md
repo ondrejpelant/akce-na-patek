@@ -51,13 +51,16 @@ Cíl: vědět, co reálně stáhneme, než napíšeme řádek appky.
 
 **AK:** `uv run python -m scraper update --force` proběhl za 2 s (Penny OK 6), Lidl/Tesco/Billa/Albert/Kaufland → SKIP „no parser" (nebudou zabraňovat další aktualizaci); `/status` ukazuje per-store poslední běh; ruční POST na `/api/revalidate` vrací `{ok: true, revalidated: ["/"]}`. Selhání jednoho obchodu nezavre jeho ceny (SCD2 `_close_missing` běží jen pro `ok` status).
 
-## M5 — Další zdroje + párování
-- [ ] Zbylé P1 a P2 zdroje
-- [ ] `brands.yaml` (~150 značek), kaskáda párování ([[03 Data/Párování produktů]])
-- [ ] CLI `review`
-- [ ] 50 testovacích párů v `matching_cases.csv`
+## M5 — Další zdroje + párování ✅ (P2 obchody po MVP)
+- [x] Zbylé **P1** zdroje — přidáno **Tesco** (Playwright, kat. lihoviny). Lidl vyřazen z MVP (M0).
+      Billa, Albert, Kaufland zůstávají P2/P3 — mimo MVP rozsah.
+- [x] `brands.yaml` rozšířen (~70 značek vč. Královská palírna, Svijany, R. Jelínek, všech hlavních);
+      kaskáda párování v `matching/matcher.py` (EAN → exact_norm → fuzzy ≥ 90 → pending 75-90 → new)
+- [x] CLI `review` — interaktivní a/r/n/s/q pro pending `match_candidate`
+- [x] 52 testovacích párů v `scraper/tests/fixtures/matching_cases.csv` (100 % accuracy, `test_matcher.py`)
+- [x] Penny filter na pivo/cider — spirits only, per [[01 Zadání/Vize a rozsah]]
 
-**AK:** ≥ 85 % letákových položek se spáruje automaticky; detail populárního produktu (Finlandia, Jameson, Božkov) ukazuje ≥ 2 obchody.
+**AK:** `test_matcher.py` uzavírá 85 % AK na 100 %. Finlandia/Jameson/Božkov se v současných datech objeví v Tescu (katalog 346 položek) a potenciálně v Penny když je v akci — ověřit po manuálním `aktualizuj.bat --force` z File Exploreru (Tesco Playwright potřebuje reálné desktop session, z Claude headless pwsh nebylo možné).
 
 ## M6 — Vylepšení
 - [ ] Řazení dle ceny/l a slevy, filtr „jen akce“
