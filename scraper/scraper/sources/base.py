@@ -21,6 +21,10 @@ class Source(ABC):
 
     def __init__(self, http: HttpClient) -> None:
         self.http = http
+        # Set by fetch() when it stopped early (e.g. the source refused further
+        # pages). The orchestrator then records the run as 'partial' so SCD2
+        # does not close prices of items this run never saw.
+        self.partial_reason: str | None = None
 
     @abstractmethod
     def fetch(self) -> Iterator[ScrapedItem]:

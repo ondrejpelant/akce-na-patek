@@ -105,8 +105,11 @@ def _print_report(report: UpdateReport) -> None:
 
     if report.revalidated:
         console.print("[green]Web revalidován ✓[/]")
-    elif report.any_failed:
-        console.print("[yellow]Web NEBYL revalidován (některý obchod selhal).[/]")
+    elif report.revalidate_error:
+        console.print(
+            f"[yellow]Web NEBYL revalidován — {report.revalidate_error}. "
+            "Běží web na REVALIDATE_URL?[/]"
+        )
     else:
         console.print("[dim]Web nebyl revalidován — chybí REVALIDATE_URL / REVALIDATE_TOKEN v .env.[/]")
 
@@ -184,14 +187,22 @@ def run(
                 raise typer.Exit(code=1) from exc
 
             staged, matched = stage_items(conn, scrape_run_id, items)
-            inserted = merge_prices(conn, [scrape_run_id])
+            note = source.partial_reason or (None if items else "0 položek")
+            # Status must be final before the merge: SCD2 only closes missing
+            # prices for 'ok' runs.
             finish_run(
                 conn,
                 scrape_run_id,
-                status="ok",
+                status="partial" if note else "ok",
                 items_found=len(items),
-                items_changed=inserted,
+                error=note,
             )
+            inserted = merge_prices(conn, [scrape_run_id])
+            with conn.cursor() as cur:
+                cur.execute(
+                    "update scrape_run set items_changed = %s where id = %s",
+                    (inserted, scrape_run_id),
+                )
             conn.commit()
 
         with _connect(cfg) as conn:

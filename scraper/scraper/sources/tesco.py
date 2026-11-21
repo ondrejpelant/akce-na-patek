@@ -29,6 +29,7 @@ from decimal import Decimal
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 from selectolax.lexbor import LexborNode as Node
 
+from scraper.http import BlockedError
 from scraper.matching.normalize import parse as normalize_name
 from scraper.models import ScrapedItem
 from scraper.sources import register
@@ -60,40 +61,54 @@ class Tesco(Source):
         # reliably that way. Owner can set TESCO_HEADLESS=1 in scraper/.env
         # to try the quiet background mode instead.
         headless = os.environ.get("TESCO_HEADLESS", "0") == "1"
+        # The bundled "Chrome for Testing" build fails Windows side-by-side
+        # activation on the owner's PC, so default to the system Edge that
+        # ships with Windows. PLAYWRIGHT_CHANNEL="" falls back to the bundle.
+        channel = os.environ.get("PLAYWRIGHT_CHANNEL", "msedge") or None
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=headless)
+            browser = pw.chromium.launch(channel=channel, headless=headless)
             context = browser.new_context(
                 locale="cs-CZ", viewport={"width": 1366, "height": 900}
             )
             page = context.new_page()
             try:
-                total_pages = self._discover_total_pages(page)
+                html = self._load_page(page, 1)
+                total_pages = _total_pages(html)
                 log.info("tesco: paginating %d page(s), %d items/page", total_pages, PAGE_SIZE)
-                for page_no in range(1, total_pages + 1):
-                    url = self._page_url(page_no)
-                    page.goto(url, wait_until="networkidle", timeout=30_000)
+                yield from parse_tiles(html)
+                for page_no in range(2, total_pages + 1):
                     try:
-                        page.wait_for_selector(
-                            "li[data-testid] p.online-components-product-tile-price__text",
-                            timeout=10_000,
+                        html = self._load_page(page, page_no)
+                    except BlockedError as exc:
+                        # Per 07 Provoz/Právní a etické zásady §4 we stop here
+                        # and keep what we have; no retries, no workarounds.
+                        self.partial_reason = (
+                            f"stránka {page_no}/{total_pages} odmítnuta ({exc}); "
+                            f"uloženo jen {page_no - 1}"
                         )
-                    except Exception:
-                        log.warning("tesco: price module did not render on page %d", page_no)
-                    html = page.content()
+                        log.warning("tesco: %s", self.partial_reason)
+                        break
                     yield from parse_tiles(html)
             finally:
                 context.close()
                 browser.close()
 
-    def _discover_total_pages(self, page) -> int:
-        page.goto(self._page_url(1), wait_until="domcontentloaded", timeout=30_000)
-        text = page.content()
-        m = _TOTAL_RE.search(text)
-        if not m:
-            return 1
-        total_items = int(m.group(1))
-        pages = -(-total_items // PAGE_SIZE)  # ceil
-        return min(pages, MAX_PAGES)
+    def _load_page(self, page, page_no: int) -> str:
+        # The shop keeps firing analytics beacons, so "networkidle" never
+        # settles; wait for DOM + the price element instead.
+        resp = page.goto(self._page_url(page_no), wait_until="domcontentloaded", timeout=30_000)
+        if resp is not None and resp.status in (401, 403, 429):
+            raise BlockedError(f"HTTP {resp.status}")
+        try:
+            page.wait_for_selector(
+                "li[data-testid] p.online-components-product-tile-price__text",
+                timeout=15_000,
+            )
+        except Exception:
+            log.warning("tesco: price module did not render on page %d", page_no)
+        # Same politeness as HttpClient: at most 1 request / 2 s.
+        page.wait_for_timeout(2_000)
+        return page.content()
 
     @staticmethod
     def _page_url(page_no: int) -> str:
@@ -103,6 +118,17 @@ class Tesco(Source):
 # ---------------------------------------------------------------------------
 # HTML parsing — called straight from fixture-backed tests.
 # ---------------------------------------------------------------------------
+
+
+def _total_pages(html: str) -> int:
+    node = HTMLParser(html).css_first(".ddsweb-pagination__results")
+    text = (node.text() if node else html).replace("\xa0", " ").replace("&nbsp;", " ")
+    m = _TOTAL_RE.search(text)
+    if not m:
+        log.warning("tesco: pagination total not found, scraping page 1 only")
+        return 1
+    pages = -(-int(m.group(1)) // PAGE_SIZE)  # ceil
+    return min(pages, MAX_PAGES)
 
 
 def parse_tiles(html: str) -> Iterator[ScrapedItem]:

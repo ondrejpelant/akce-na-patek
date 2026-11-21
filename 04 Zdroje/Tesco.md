@@ -36,10 +36,16 @@ Mapování na `ScrapedItem`:
 - Browser pane (Playwright-based) projde bez problémů z domácí IP.
 - Spoofování prohlížečových hlaviček NEDĚLÁME (porušilo by [[../07 Provoz/Právní a etické zásady]] bod 4).
 
+## Realita po M5 (21. 11. 2026, 15:25)
+- **Playwright projde jen 1. stránku.** Stránka 2 a dál vrací `403 Access Denied` (Akamai edgesuite). Scraper na 403 přestane stránkovat a běh označí `partial` — SCD2 pak nezavírá ceny produktů, které tento běh neviděl. Žádné obcházení (stealth, falešné UA, „lidské" prodlevy).
+- Výsledek: **~48 produktů / ~70 cen** na běh (první stránka podle relevance = nejprodávanější lihoviny), ze 346.
+- Prohlížeč: systémový **Microsoft Edge** (`PLAYWRIGHT_CHANNEL=msedge`, default). Přibalený „Chrome for Testing" (chromium-1255) na Ondrově PC padá na Windows side-by-side chybě („Závislé sestavení 159.0.8154.6 nelze najít") i po `playwright install --force`.
+- Okno prohlížeče je viditelné (default); `TESCO_HEADLESS=1` přepne do headless, ale tam se ceny nevyrenderují.
+- Možnosti, jak pokrytí legitimně zvýšit, až bude potřeba: řazení `sortBy=price-ascending` místo relevance (jiných 48 produktů — nejlevnější), nebo ruční `add-price` pro konkrétní lahve. Rotace kategorií/opakované pokusy po 403 NE.
+
 ## Rozhodnutí po spike
-- **Zařadit — P1, runner: PC, technika: Playwright Chromium** (`needs_browser = True` v `sources/tesco.py`).
-- `uv run playwright install chromium` provést při implementaci M2 (~400 MB).
-- Rate limit: 0,5 rps default + 1–2 s mezi stránkami. 15 stránek × ~2 s ≈ 30–45 s na jeden běh. OK.
+- **Zařadit — P1, runner: PC, technika: Playwright (systémový Edge)** (`needs_browser = True` v `sources/tesco.py`). Viz „Realita po M5" výše — reálně jen 1. stránka.
+- Rate limit: 2 s pauza po každé stránce.
 - EAN/ABV nejsou v tile — přijdou z **detail page**. V MVP můžeme EAN vynechat (párovat jen přes značku + objem) a abv doplňovat z normalize/brands. Detail crawl přidáme, pokud bude parování slabé.
 
 ## Spike checklist

@@ -60,7 +60,10 @@ Cíl: vědět, co reálně stáhneme, než napíšeme řádek appky.
 - [x] 52 testovacích párů v `scraper/tests/fixtures/matching_cases.csv` (100 % accuracy, `test_matcher.py`)
 - [x] Penny filter na pivo/cider — spirits only, per [[01 Zadání/Vize a rozsah]]
 
-**AK:** `test_matcher.py` uzavírá 85 % AK na 100 %. Finlandia/Jameson/Božkov se v současných datech objeví v Tescu (katalog 346 položek) a potenciálně v Penny když je v akci — ověřit po manuálním `aktualizuj.bat --force` z File Exploreru (Tesco Playwright potřebuje reálné desktop session, z Claude headless pwsh nebylo možné).
+**AK — stav 21. 11. 15:25:**
+- ✅ párování: `test_matcher.py` 100 % (52 párů); živě Tesco 43/46 = 93 % auto, 3 pending na `review`.
+- ⚠️ „≥ 2 obchody u populárního produktu" **zatím nesplněno datově**: Finlandia, Jameson, Božkov jsou v DB z Tesca, ale Penny má tento týden jen vlastní značku Královská palírna → průnik 0. Splní se, až Penny dá do letáku značkový produkt z první Tesco stránky.
+- ⚠️ Tesco dává jen 1. stránku (~48 produktů ze 346) — stránka 2 vrací 403, neobcházíme. Viz [[04 Zdroje/Tesco]].
 
 ## M6 — Vylepšení
 - [ ] Řazení dle ceny/l a slevy, filtr „jen akce“

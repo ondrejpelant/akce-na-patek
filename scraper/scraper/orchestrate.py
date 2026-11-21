@@ -55,6 +55,7 @@ class UpdateReport:
     finished_at: datetime | None = None
     stores: list[StoreResult] = field(default_factory=list)
     revalidated: bool = False
+    revalidate_error: str | None = None  # None + not revalidated = not configured
 
     @property
     def any_failed(self) -> bool:
@@ -115,7 +116,7 @@ def run_update(
             refresh_materialized_view(conn)
             cleanup_staging(conn)
 
-    report.revalidated = _try_revalidate(cfg)
+    report.revalidated, report.revalidate_error = _try_revalidate(cfg)
     report.finished_at = datetime.now()
     return report
 
@@ -155,13 +156,20 @@ def _run_store(conn, http: HttpClient, code: str, name: str, host: str) -> Store
 
     staged, _matched = stage_items(conn, scrape_run_id, items)
 
-    # Sanity: today's items_found must be at least 50 % of the 7-day median.
+    # partial = SCD2 will not close prices this run did not see.
     threshold = _sanity_threshold(conn, store_code=code)
-    status = "partial" if (threshold is not None and len(items) < threshold) else "ok"
+    note: str | None = None
+    if source.partial_reason:
+        note = source.partial_reason
+    elif not items:
+        note = "0 položek"
+    elif threshold is not None and len(items) < threshold:
+        note = f"jen {len(items)} položek (< 50 % mediánu {threshold * 2:.0f})"
+    status = "partial" if note else "ok"
 
     finish_run(
         conn, scrape_run_id, status=status,
-        items_found=len(items), items_changed=None,
+        items_found=len(items), items_changed=None, error=note,
     )
     conn.commit()
 
@@ -169,7 +177,7 @@ def _run_store(conn, http: HttpClient, code: str, name: str, host: str) -> Store
         code=code, name=name, status=status,
         items_found=len(items), items_changed=staged,
         duration_s=time.monotonic() - started,
-        error=None if status == "ok" else f"items_found {len(items)} < {threshold:.0f}",
+        error=note,
     )
 
 
@@ -185,6 +193,7 @@ def _ran_ok_today(conn, store_id: int) -> bool:
             """
             select 1 from scrape_run
             where store_id = %s and status in ('ok','partial')
+              and items_found > 0
               and finished_at::date = current_date
             limit 1
             """,
@@ -233,10 +242,11 @@ def _latest_run_id_for(cfg: Config, store_code: str) -> int | None:
     return row[0] if row else None
 
 
-def _try_revalidate(cfg: Config) -> bool:
-    """POST to the web's revalidate route. Silent no-op when not configured."""
+def _try_revalidate(cfg: Config) -> tuple[bool, str | None]:
+    """POST to the web's revalidate route. Returns (ok, error).
+    (False, None) means revalidation is not configured."""
     if not cfg.revalidate_url or not cfg.revalidate_token:
-        return False
+        return False, None
     try:
         resp = httpx.post(
             cfg.revalidate_url,
@@ -244,10 +254,10 @@ def _try_revalidate(cfg: Config) -> bool:
             timeout=10,
         )
         resp.raise_for_status()
-        return True
+        return True, None
     except Exception as exc:
         log.warning("revalidate failed: %s", exc)
-        return False
+        return False, f"{type(exc).__name__}: {exc}"
 
 
 def _load_source_registry() -> None:

@@ -99,8 +99,6 @@
 - name: Grand Marnier
 - name: Sambuca
 - name: Malibu
-- name: Vaječný likér Božkov
-  aliases: [bozkov vajecny liker]
 
 # --- české pálenky a lihoviny ---
 - name: Jelínek
