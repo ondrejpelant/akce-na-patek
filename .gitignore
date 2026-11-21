@@ -1,0 +1,30 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# node / next
+web/node_modules/
+web/.next/
+web/.vercel/
+web/out/
+
+# python / uv
+scraper/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# scraper runtime
+scraper/logs/
+scraper/tests/fixtures/_tmp/
+
+# obsidian
+.obsidian/workspace*.json
+.obsidian/cache
+
+# os
+.DS_Store
+Thumbs.db

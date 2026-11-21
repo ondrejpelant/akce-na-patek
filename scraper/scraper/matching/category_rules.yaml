@@ -1,0 +1,24 @@
+# Pravidla pro přiřazení kategorie u letákových položek (nemají strom kategorií).
+# První shoda vyhrává. Klíčová slova jsou lowercased bez diakritiky; matchuje se přes
+# contains nad f_norm(raw_name || ' ' || brand_guess).
+
+- category: brandy
+  keywords: [cognac, konak, brandy, metaxa, armagnac]
+- category: bylinne
+  keywords: [becherovka, jagermeister, fernet, bylinny]
+- category: palenky
+  keywords: [slivovice, hruskovice, merunkovice, borovicka, tuzemak]
+- category: tequila
+  keywords: [tequila, mezcal]
+- category: rum
+  keywords: [rum, ron, spiced]
+- category: vodka
+  keywords: [vodka, wodka]
+- category: gin
+  keywords: [gin]
+- category: whisky
+  keywords: [whisky, whiskey, bourbon, scotch]
+- category: likery
+  keywords: [liker, liqueur, cream, amaretto, baileys]
+- category: ostatni
+  keywords: [absinth, ouzo, pisco]

@@ -1,0 +1,12 @@
+{
+  "userIgnoreFilters": [
+    "web/",
+    "scraper/",
+    "db/",
+    ".github/",
+    "node_modules/"
+  ],
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "10 Deník"
+}

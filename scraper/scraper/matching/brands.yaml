@@ -1,0 +1,44 @@
+# Seed značek (postupně rozšiřuj). Levá strana = kanonická značka,
+# aliases = další zápisy, které se mají na ni mapovat (lowercased, bez diakritiky).
+# Viz 03 Data/Párování produktů.md.
+
+- name: Finlandia
+- name: Absolut
+- name: Bozkov
+  aliases: [božkov]
+- name: Tullamore D.E.W.
+  aliases: [tullamore dew, tullamore]
+- name: Jameson
+- name: Jägermeister
+  aliases: [jagermeister, jagr]
+- name: Becherovka
+- name: Captain Morgan
+- name: Bacardi
+- name: Metaxa
+- name: Hennessy
+- name: Rémy Martin
+  aliases: [remy martin]
+- name: Jelínek
+  aliases: [jelinek, r. jelinek, rudolf jelinek]
+- name: Tatratea
+- name: Smirnoff
+- name: Johnnie Walker
+- name: Chivas Regal
+- name: Jim Beam
+- name: Jack Daniel's
+  aliases: [jack daniels]
+- name: Ballantine's
+  aliases: [ballantines]
+- name: Tullamore
+- name: Grant's
+  aliases: [grants]
+- name: Beefeater
+- name: Bombay Sapphire
+- name: Gordon's
+  aliases: [gordons]
+- name: Havana Club
+- name: Captain Morgan Spiced Gold
+  aliases: [captain morgan spiced]
+- name: Fernet Stock
+- name: Magister
+- name: Amundsen
