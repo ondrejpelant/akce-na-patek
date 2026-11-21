@@ -29,6 +29,7 @@ from scraper.http import BlockedError, HttpClient
 from scraper.load.publish import cleanup_staging, refresh_materialized_view
 from scraper.load.scd2 import merge_prices
 from scraper.load.staging import finish_run, open_run, stage_items
+from scraper.orchestrate import StoreResult, UpdateReport, run_update
 from scraper.sources import REGISTRY
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help="Akce na pátek — scraper")
@@ -57,12 +58,76 @@ def update(
     store: str | None = typer.Option(None, "--store", help="Jen jeden obchod (code)"),
     verbose: bool = typer.Option(False, "-v", "--verbose"),
 ) -> None:
-    """Orchestrate every active source, match, publish, revalidate web.
-    Full orchestration arrives in M4; for M2 use `run --store <code>` instead.
+    """Run every active source, SCD2 merge the results, refresh the MV and
+    revalidate the web. Prints a summary table at the end.
     """
     _setup_logging(verbose)
-    console.print(f"[yellow]update: not yet implemented (M4), force={force}, store={store}[/]")
-    raise typer.Exit(code=0)
+    _write_log_file()
+
+    cfg = Config.from_env()
+    report = run_update(cfg, only_store=store, force=force)
+    _print_report(report)
+
+    raise typer.Exit(code=1 if report.any_failed else 0)
+
+
+def _write_log_file() -> None:
+    """Also append logs to scraper/logs/RRRR-MM-DD_HHMM.log for post-mortem."""
+    from datetime import datetime
+
+    from scraper.config import SCRAPER_ROOT
+
+    log_dir = SCRAPER_ROOT / "logs"
+    log_dir.mkdir(exist_ok=True)
+    log_path = log_dir / f"{datetime.now():%Y-%m-%d_%H%M}.log"
+    fh = logging.FileHandler(log_path, encoding="utf-8")
+    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    logging.getLogger().addHandler(fh)
+
+
+def _print_report(report: UpdateReport) -> None:
+    from rich.table import Table
+
+    title = f"Akce na pátek — aktualizace {report.started_at:%d. %m. %Y %H:%M}"
+    table = Table(title=title, show_lines=False)
+    table.add_column("Obchod")
+    table.add_column("Status")
+    table.add_column("Položek", justify="right")
+    table.add_column("Změn cen", justify="right")
+    table.add_column("Trvání", justify="right")
+    table.add_column("Poznámka", max_width=40)
+
+    for s in report.stores:
+        table.add_row(*_row_for(s))
+
+    console.print()
+    console.print(table)
+
+    if report.revalidated:
+        console.print("[green]Web revalidován ✓[/]")
+    elif report.any_failed:
+        console.print("[yellow]Web NEBYL revalidován (některý obchod selhal).[/]")
+    else:
+        console.print("[dim]Web nebyl revalidován — chybí REVALIDATE_URL / REVALIDATE_TOKEN v .env.[/]")
+
+
+def _row_for(s: StoreResult) -> list[str]:
+    status_text = {
+        "ok": "[green]OK[/]",
+        "partial": "[yellow]PARTIAL[/]",
+        "failed": "[red]CHYBA[/]",
+        "skipped": "[dim]SKIP[/]",
+    }.get(s.status, s.status)
+    duration = f"{int(s.duration_s // 60):d}:{int(s.duration_s % 60):02d}" if s.duration_s else "—"
+    note = s.error or s.skipped_reason or ""
+    return [
+        s.name,
+        status_text,
+        str(s.items_found) if s.items_found else "—",
+        str(s.items_changed) if s.items_changed else "—",
+        duration,
+        note,
+    ]
 
 
 @app.command()
@@ -168,8 +233,104 @@ def review() -> None:
 
 
 @app.command(name="add-price")
-def add_price() -> None:
-    console.print("[yellow]add-price: not yet implemented (M4)[/]")
+def add_price(
+    store: str = typer.Option(..., "--store", help="Kód obchodu (tesco, penny, ...)"),
+    query: str = typer.Option(..., "--query", "-q", help="Fragment názvu/značky produktu"),
+    price: float = typer.Option(..., "--price", help="Běžná cena v Kč"),
+) -> None:
+    """Ručně zapíše běžnou cenu produktu v obchodě.
+
+    Použití: před nákupem jsem v prodejně viděl, že Finlandia 0,7 l stojí v Pennym
+    289 Kč mimo akci -> `add-price --store penny --query finlandia -q 0.7 --price 289`.
+    Cena se uloží jako price_source='manual', price_type='regular' a vydrží,
+    dokud ji nový běh nepřepíše nebo dokud ji nenahradí novější manual zápis.
+    """
+    cfg = Config.from_env()
+    with _connect(cfg) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            select p.id, p.brand, p.name, p.volume_ml
+            from product p
+            where p.search_text % f_norm(%s)
+               or p.search_text like '%%' || f_norm(%s) || '%%'
+            order by similarity(p.search_text, f_norm(%s)) desc
+            limit 10
+            """,
+            (query, query, query),
+        )
+        candidates = cur.fetchall()
+
+        if not candidates:
+            console.print(f"[red]Žádný produkt nematchnul '{query}'[/]")
+            raise typer.Exit(code=1)
+
+        if len(candidates) > 1:
+            console.print("[bold]Vyber produkt:[/]")
+            for i, (_pid, brand, name, volume) in enumerate(candidates, 1):
+                console.print(f"  {i}. {brand} {name} ({volume} ml)")
+            raw = typer.prompt("Číslo", default="1")
+            try:
+                idx = int(raw) - 1
+                if idx < 0 or idx >= len(candidates):
+                    raise ValueError
+            except ValueError as exc:
+                raise typer.Exit(code=1) from exc
+        else:
+            idx = 0
+
+        product_id, brand, name, volume = candidates[idx]
+
+        cur.execute(
+            """
+            select sp.id from store_product sp
+            join store s on s.id = sp.store_id
+            where sp.product_id = %s and s.code = %s
+            """,
+            (product_id, store),
+        )
+        row = cur.fetchone()
+        if row:
+            store_product_id = row[0]
+        else:
+            # Create a synthetic store_product so the price has somewhere to hang.
+            cur.execute(
+                """
+                insert into store_product (store_id, store_sku, product_id, raw_name,
+                                           volume_ml, source_kind)
+                select s.id, 'manual-' || %s, %s, %s, %s, 'leaflet'
+                from store s where s.code = %s
+                returning id
+                """,
+                (product_id, product_id, f"{brand} {name}", volume, store),
+            )
+            fetched = cur.fetchone()
+            if fetched is None:
+                console.print(f"[red]Neznámý obchod: {store}[/]")
+                raise typer.Exit(code=1)
+            store_product_id = fetched[0]
+
+        # SCD2: close the current regular row, open a new manual one.
+        cur.execute(
+            """
+            update price set valid_to = now()
+            where store_product_id = %s and price_type = 'regular' and valid_to = 'infinity'
+            """,
+            (store_product_id,),
+        )
+        cur.execute(
+            """
+            insert into price (store_product_id, price_type, price_czk, price_source)
+            values (%s, 'regular', %s, 'manual')
+            """,
+            (store_product_id, price),
+        )
+        conn.commit()
+
+        refresh_materialized_view(conn)
+
+    console.print(
+        f"[green]✓ {brand} {name} ({volume} ml) v {store}: běžná cena {price:.2f} Kč (manual)[/]"
+    )
 
 
 @app.command()

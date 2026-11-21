@@ -182,6 +182,54 @@ export async function fetchOffers(productId: number): Promise<StoreOffer[]> {
 // Freshness banner
 // ---------------------------------------------------------------------------
 
+export type StatusRow = {
+  code: string;
+  name: string;
+  is_active: boolean;
+  last_started_at: string | null;
+  last_finished_at: string | null;
+  last_status: "running" | "ok" | "partial" | "failed" | null;
+  last_items_found: number | null;
+  last_items_changed: number | null;
+  last_error: string | null;
+  last_host: string | null;
+};
+
+export async function fetchStatus(): Promise<StatusRow[]> {
+  const rows = (await sql`
+    select
+      s.code, s.name, s.is_active,
+      r.started_at   as last_started_at,
+      r.finished_at  as last_finished_at,
+      r.status       as last_status,
+      r.items_found  as last_items_found,
+      r.items_changed as last_items_changed,
+      r.error        as last_error,
+      r.host         as last_host
+    from store s
+    left join lateral (
+      select * from scrape_run
+      where store_id = s.id
+      order by started_at desc
+      limit 1
+    ) r on true
+    order by s.code
+  `) as Record<string, unknown>[];
+
+  return rows.map((r) => ({
+    code: String(r.code),
+    name: String(r.name),
+    is_active: Boolean(r.is_active),
+    last_started_at: r.last_started_at == null ? null : String(r.last_started_at),
+    last_finished_at: r.last_finished_at == null ? null : String(r.last_finished_at),
+    last_status: (r.last_status ?? null) as StatusRow["last_status"],
+    last_items_found: r.last_items_found == null ? null : Number(r.last_items_found),
+    last_items_changed: r.last_items_changed == null ? null : Number(r.last_items_changed),
+    last_error: r.last_error == null ? null : String(r.last_error),
+    last_host: r.last_host == null ? null : String(r.last_host),
+  }));
+}
+
 export async function fetchFreshness(): Promise<{ newest: Date | null; stores: FreshnessRow[] }> {
   const rows = (await sql`
     select code, name, last_ok_at

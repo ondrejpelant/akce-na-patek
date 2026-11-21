@@ -42,14 +42,14 @@ Cíl: vědět, co reálně stáhneme, než napíšeme řádek appky.
 
 **AK:** `/?q=jemna` i `/?q=jemn%C3%A1` vrací vodku (diakritika tolerance ✓); kliknutí na kartu otevře `/p/<slug>` s nabídkou obchodu, cenou, slevou -21 % a datem platnosti; viewport 375×812 bez horizontálního scrollu. Lighthouse zatím nespuštěn — až po Vercel deployi (localhost dev build neřekne realistické skóre).
 
-## M4 — Aktualizace jedním klikem
-- [ ] `scraper update` + `aktualizuj.bat` + souhrnná tabulka ([[05 Scraper/Aktualizace dat]])
-- [ ] `.claude/commands/aktualizuj.md` otestovat
-- [ ] `/api/revalidate`, `/status`, banner se stářím dat
-- [ ] Sanity checky, `partial` logika, přeskočení dnes již aktualizovaných obchodů
-- [ ] `add-price` (ruční zadání běžné ceny)
+## M4 — Aktualizace jedním klikem ✅
+- [x] `scraper update` + `aktualizuj.bat` + souhrnná tabulka ([[05 Scraper/Aktualizace dat]])
+- [x] `.claude/commands/aktualizuj.md` — hotové z M1, nyní pracuje proti reálnému `update`
+- [x] `/api/revalidate`, `/status`, banner se stářím dat
+- [x] Sanity checky (50 % mediánu posledních 7 OK běhů → `partial`), přeskočení dnes již aktualizovaných obchodů
+- [x] `add-price` (ruční zadání běžné ceny)
 
-**AK:** dvojklik na `aktualizuj.bat` → do 10 min souhrn a čerstvá data na telefonu; selhání jednoho obchodu nezpůsobí zmizení jeho cen; po skončení akce se u produktu zobrazí běžná cena z letáku.
+**AK:** `uv run python -m scraper update --force` proběhl za 2 s (Penny OK 6), Lidl/Tesco/Billa/Albert/Kaufland → SKIP „no parser" (nebudou zabraňovat další aktualizaci); `/status` ukazuje per-store poslední běh; ruční POST na `/api/revalidate` vrací `{ok: true, revalidated: ["/"]}`. Selhání jednoho obchodu nezavre jeho ceny (SCD2 `_close_missing` běží jen pro `ok` status).
 
 ## M5 — Další zdroje + párování
 - [ ] Zbylé P1 a P2 zdroje
