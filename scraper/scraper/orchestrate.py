@@ -262,5 +262,6 @@ def _try_revalidate(cfg: Config) -> tuple[bool, str | None]:
 
 def _load_source_registry() -> None:
     """Import every source module so @register populates REGISTRY."""
+    import scraper.sources.billa
     import scraper.sources.penny
     import scraper.sources.tesco  # noqa: F401

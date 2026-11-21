@@ -141,10 +141,17 @@ def _match_one(
             _link(cur, c.store_product_id, pid, method="ean", score=100.0)
             return MatchOutcome(c.store_product_id, pid, "ean", 100.0)
 
+    slug = resolve_category(c.raw_name, c.store_code, c.source_category, rules=rules)
+    category_id = cat_by_slug.get(slug, default_cat)
+
     # 2 + 3) Same brand + same volume -> pull all candidates and score them.
     norm_new = match_norm(name)
-    for pid, _candidate_name, score in _score_candidates(cur, brand=brand, name=norm_new,
-                                                       volume_ml=volume):
+    for pid, score, product_cat in _score_candidates(cur, brand=brand, name=norm_new,
+                                                     volume_ml=volume):
+        # Different known categories (e.g. "Božkov Vodka" vs "Božkov Originál",
+        # both empty after stopwords) are never the same bottle.
+        if not categories_compatible(category_id, product_cat, default_cat):
+            continue
         if score >= 100:
             _link(cur, c.store_product_id, pid, method="exact_norm", score=100.0)
             return MatchOutcome(c.store_product_id, pid, "exact_norm", 100.0)
@@ -157,8 +164,6 @@ def _match_one(
         break  # candidates are sorted descending; nothing better can follow
 
     # 5) no match → new product
-    slug = resolve_category(c.raw_name, c.store_code, c.source_category, rules=rules)
-    category_id = cat_by_slug.get(slug, default_cat)
     pid = _create_product(cur, category_id=category_id, brand=brand, name=name,
                           volume_ml=volume, abv=c.abv or parsed.abv)
     _link_only(cur, c.store_product_id, pid)
@@ -176,27 +181,45 @@ def _find_by_ean(cur, ean: str) -> int | None:
     return row[0] if row else None
 
 
+def name_score(a: str, b: str) -> float:
+    """Similarity of two match_norm()-ed names, 0-100.
+
+    token_sort_ratio, not token_set_ratio: a subset ("bily" vs "bily kokosovy",
+    "vajecny" vs "vajecny liskovy orisek") is usually a different variant, and
+    token_set_ratio scores every subset 100. Two empty names (brand only, or
+    only stopwords) count as equal.
+    """
+    if a == b:
+        return 100.0
+    if not a or not b:
+        return 0.0
+    return float(fuzz.token_sort_ratio(a, b))
+
+
+def categories_compatible(a: int | None, b: int | None, default_cat: int) -> bool:
+    """False only when both categories are known and differ; "ostatni" is unknown."""
+    if a is None or b is None or a == default_cat or b == default_cat:
+        return True
+    return a == b
+
+
 def _score_candidates(
     cur, *, brand: str, name: str, volume_ml: int
-) -> list[tuple[int, str, float]]:
-    """Fetch every product that shares brand + volume and score it against
-    `name` (which must already be match_norm-normalised). Returns rows sorted
-    descending by score so callers can early-exit."""
+) -> list[tuple[int, float, int]]:
+    """Every product with the same brand + volume as (id, score, category_id),
+    scored against `name` (already match_norm-ed), best first."""
     cur.execute(
         """
-        select id, name from product
+        select id, name, category_id from product
         where f_norm(brand) = f_norm(%s) and volume_ml = %s
         """,
         (brand, volume_ml),
     )
-    rows: list[tuple[int, str]] = cur.fetchall()
-    scored: list[tuple[int, str, float]] = []
-    for pid, candidate_name in rows:
-        other = match_norm(candidate_name)
-        # rapidfuzz scores two empty strings 0; for us "brand only" == "brand only".
-        score = 100.0 if not name and not other else float(fuzz.token_set_ratio(name, other))
-        scored.append((pid, candidate_name, score))
-    scored.sort(key=lambda t: t[2], reverse=True)
+    scored = [
+        (pid, name_score(name, match_norm(candidate_name)), category_id)
+        for pid, candidate_name, category_id in cur.fetchall()
+    ]
+    scored.sort(key=lambda t: t[1], reverse=True)
     return scored
 
 
@@ -440,12 +463,9 @@ def match_norm(text: str) -> str:
     """
     base = _PUNCT_RE.sub(" ", f_norm(text))
     tokens = [t for t in base.split() if t]
-    out: list[str] = []
-    for tok in tokens:
-        if tok in _DESCRIPTOR_STOPWORDS:
-            continue
-        out.extend((_ABBREV_EXPANSIONS.get(tok) or tok).split())
-    return " ".join(out)
+    expanded = [w for tok in tokens for w in (_ABBREV_EXPANSIONS.get(tok) or tok).split()]
+    # Stopwords after expansion, so "VS" and "Very Special" normalise alike.
+    return " ".join(w for w in expanded if w not in _DESCRIPTOR_STOPWORDS)
 
 
 def _slugify(text: str) -> str:

@@ -62,7 +62,7 @@ Cíl: vědět, co reálně stáhneme, než napíšeme řádek appky.
 
 **AK — stav 21. 11. 15:25:**
 - ✅ párování: `test_matcher.py` 100 % (52 párů); živě Tesco 43/46 = 93 % auto, 3 pending na `review`.
-- ⚠️ „≥ 2 obchody u populárního produktu" **zatím nesplněno datově**: Finlandia, Jameson, Božkov jsou v DB z Tesca, ale Penny má tento týden jen vlastní značku Královská palírna → průnik 0. Splní se, až Penny dá do letáku značkový produkt z první Tesco stránky.
+- ✅ „≥ 2 obchody u populárního produktu" — splněno po přidání **Billy** (21. 11.): 37 produktů ve 2 obchodech, např. Finlandia (Billa 299,90 / Tesco Clubcard 319,90 / běžná 479,90), Jameson, Božkov Originál Tuzemský.
 - ⚠️ Tesco dává jen 1. stránku (~48 produktů ze 346) — stránka 2 vrací 403, neobcházíme. Viz [[04 Zdroje/Tesco]].
 
 ## M6 — Vylepšení

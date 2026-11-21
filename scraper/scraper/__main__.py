@@ -143,6 +143,7 @@ def run(
     _setup_logging(verbose)
 
     # ensure source modules register themselves
+    import scraper.sources.billa
     import scraper.sources.penny
     import scraper.sources.tesco  # noqa: F401
 

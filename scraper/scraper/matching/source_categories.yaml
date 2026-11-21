@@ -4,6 +4,15 @@
 # slova v názvu (category_rules.yaml), pak „ostatni".
 # Klíčová slova v názvu mají přednost před touto tabulkou.
 
+billa:
+  # slug podkategorie bez čísla na konci (/produkty/rum-a-tuzemak-1560)
+  rum-a-tuzemak: rum
+  gin: gin
+  brandy-a-konak: brandy
+  whiskey-a-bourbon: whisky
+  likery: likery
+  vodka: vodka
+
 tesco:
   vodka: vodka
   gin: gin

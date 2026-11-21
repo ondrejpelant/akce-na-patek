@@ -51,3 +51,10 @@ Olmeca Tequila Gold 0.7l,Olmeca Gold 0.7l,TRUE,extra Tequila word
 Olmeca Blanco 0.7l,Olmeca Gold 0.7l,FALSE,different variant
 Ballantine's Finest 0.7l,Ballantines 0.7l,TRUE,punctuation + specifier
 Glenfiddich 12 years 0.7l,Glenfiddich 12 let 0.7l,TRUE,language tolerant on age
+Božkov Bílý 0,5l,Božkov Bílý kokosový 0,5l,FALSE,real false merge 21.11 (subset = other flavour)
+Božkov Vaječný likér 0,5l,Božkov Vaječný lískový oříšek 0,5l,FALSE,real false merge 21.11
+Božkov Speciál lískový oříšek 0,5l,Božkov Vaječný lískový oříšek 0,5l,FALSE,real false merge 21.11
+Jack Daniel's Tennessee Whiskey 700ml,Jack Daniel's Tennessee Honey 700ml,FALSE,real false merge 21.11
+Beefeater London Dry Gin & Tonic 250ml,Beefeater Pink Strawberry Gin & Tonic 250ml,FALSE,real false merge 21.11
+Finlandia Vodka 700ml,Finlandia Vodka 0,7l,TRUE,real Billa vs Tesco pair
+KRALOVSKA PALIRNA TUZEMAK 37,5% 0,5l,Tuzemák 37,5% Královská palírna 0,5l,TRUE,real Billa vs Penny pair
