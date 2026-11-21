@@ -168,7 +168,29 @@ def match_unmatched(conn, store_id: int) -> int:
         for row in rows
     ]
     outcomes = match_candidates(conn, candidates)
+    sync_product_images(conn, store_id)
     return sum(1 for o in outcomes if o.product_id is not None)
+
+
+def sync_product_images(conn, store_id: int) -> None:
+    """Copy this store's item photos onto their products (ADR-004).
+
+    Fills a missing product image from any source; a catalogue source
+    (Tesco) also replaces a leaflet one and keeps its own URL current.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            update product p set image_url = sp.image_url
+            from store_product sp
+            where sp.product_id = p.id
+              and sp.store_id = %s
+              and sp.image_url is not null
+              and (p.image_url is null
+                   or (sp.source_kind = 'catalog' and p.image_url is distinct from sp.image_url))
+            """,
+            (store_id,),
+        )
 
 
 def _resolve_store_id_from_run(conn, scrape_run_id: int) -> int:

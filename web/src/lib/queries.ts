@@ -150,15 +150,24 @@ export async function fetchProduct(slug: string): Promise<ProductDetail | null> 
   };
 }
 
+/**
+ * Every price valid today for the product, across all stores — a store can
+ * appear twice (e.g. Tesco Clubcard + běžná cena). Same validity rule as
+ * v_store_offer_today, but without its one-row-per-store reduction.
+ */
 export async function fetchOffers(productId: number): Promise<StoreOffer[]> {
   const rows = (await sql`
     select s.id as store_id, s.code, s.name, s.logo_url, s.loyalty_name,
-           o.price_type, o.price_source, o.price_czk, o.regular_czk,
-           o.promo_from, o.promo_to, o.url, o.observed_at
-    from v_store_offer_today o
-    join store s on s.id = o.store_id
-    where o.product_id = ${productId}
-    order by o.price_czk asc
+           c.price_type, c.price_source, c.price_czk, c.regular_czk,
+           c.promo_from, c.promo_to, c.url, c.observed_at
+    from mv_current_price c
+    join store s on s.id = c.store_id
+    where c.product_id = ${productId}
+      and (c.price_type = 'regular'
+           or current_date between coalesce(c.promo_from, current_date)
+                               and coalesce(c.promo_to, current_date))
+    order by c.price_czk asc,
+             case c.price_type when 'promo' then 1 when 'loyalty' then 2 else 3 end
   `) as Record<string, unknown>[];
 
   return rows.map((r) => ({
@@ -176,6 +185,13 @@ export async function fetchOffers(productId: number): Promise<StoreOffer[]> {
     url: r.url == null ? null : String(r.url),
     observed_at: String(r.observed_at),
   }));
+}
+
+export async function fetchActiveStoreNames(): Promise<{ id: number; name: string }[]> {
+  const rows = (await sql`
+    select id, name from store where is_active order by name
+  `) as Record<string, unknown>[];
+  return rows.map((r) => ({ id: Number(r.id), name: String(r.name) }));
 }
 
 // ---------------------------------------------------------------------------

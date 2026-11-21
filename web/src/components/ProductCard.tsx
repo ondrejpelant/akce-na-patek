@@ -8,6 +8,7 @@ import {
   formatPricePerL,
   formatPromoTo,
   formatVolume,
+  sizedImage,
 } from "@/lib/format";
 
 export default function ProductCard({ card }: { card: Card }) {
@@ -35,9 +36,10 @@ export default function ProductCard({ card }: { card: Card }) {
         {card.image_url ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={card.image_url}
+            src={sizedImage(card.image_url, 300)}
             alt=""
             loading="lazy"
+            referrerPolicy="no-referrer"
             className="h-full w-full object-contain p-2"
           />
         ) : (

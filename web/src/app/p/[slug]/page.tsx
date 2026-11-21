@@ -3,7 +3,13 @@ import { notFound } from "next/navigation";
 import BottlePlaceholder from "@/components/BottlePlaceholder";
 import LoyaltyBadge from "@/components/LoyaltyBadge";
 import PriceSparkline from "@/components/PriceSparkline";
-import { fetchOffers, fetchPriceHistory, fetchProduct, type StoreOffer } from "@/lib/queries";
+import {
+  fetchActiveStoreNames,
+  fetchOffers,
+  fetchPriceHistory,
+  fetchProduct,
+  type StoreOffer,
+} from "@/lib/queries";
 import { CATEGORY_NAMES } from "@/lib/categories";
 import {
   discountPercent,
@@ -12,6 +18,7 @@ import {
   formatPromoTo,
   formatVolume,
   relativeTimeSince,
+  sizedImage,
 } from "@/lib/format";
 
 export const instant = false;
@@ -21,11 +28,14 @@ export default async function ProductPage({ params }: PageProps<"/p/[slug]">) {
   const product = await fetchProduct(slug);
   if (!product) notFound();
 
-  const [offers, history] = await Promise.all([
+  const [offers, history, stores] = await Promise.all([
     fetchOffers(product.id),
     fetchPriceHistory(product.id),
+    fetchActiveStoreNames(),
   ]);
   const lowest = offers[0];
+  const storesWithPrice = new Set(offers.map((o) => o.store_id));
+  const storesWithout = stores.filter((s) => !storesWithPrice.has(s.id)).map((s) => s.name);
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -33,20 +43,21 @@ export default async function ProductPage({ params }: PageProps<"/p/[slug]">) {
         ← Zpět
       </Link>
 
-      <div className="flex gap-4">
-        <div className="h-32 w-32 shrink-0 overflow-hidden rounded-lg bg-neutral-50 sm:h-40 sm:w-40">
+      <div className="space-y-3">
+        <div className="mx-auto aspect-square w-full max-w-xs overflow-hidden rounded-lg bg-white">
           {product.image_url ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={product.image_url}
-              alt=""
-              className="h-full w-full object-contain p-3"
+              src={sizedImage(product.image_url, 600)}
+              alt={`${product.brand} ${product.name}`}
+              referrerPolicy="no-referrer"
+              className="h-full w-full object-contain p-2"
             />
           ) : (
             <BottlePlaceholder category={product.category_slug} className="h-full w-full" />
           )}
         </div>
-        <div className="flex flex-1 flex-col justify-center">
+        <div>
           <h1 className="text-xl font-semibold leading-tight">
             {product.brand} {product.name}
           </h1>
@@ -80,9 +91,20 @@ export default async function ProductPage({ params }: PageProps<"/p/[slug]">) {
       ) : (
         <ul className="divide-y divide-neutral-200 overflow-hidden rounded-lg border border-neutral-200 bg-white">
           {offers.map((offer, idx) => (
-            <OfferRow key={offer.store_id} offer={offer} highlighted={idx === 0} />
+            <OfferRow
+              key={`${offer.store_id}-${offer.price_type}`}
+              offer={offer}
+              highlighted={idx === 0}
+            />
           ))}
         </ul>
+      )}
+
+      {storesWithout.length > 0 && (
+        <p className="text-xs text-neutral-500">
+          Bez ceny: {storesWithout.join(", ")} — tento produkt jsme v jejich nabídce zatím
+          neviděli (nebo jejich ceny nestahujeme).
+        </p>
       )}
 
       <PriceSparkline points={history} />

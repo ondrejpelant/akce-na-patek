@@ -69,4 +69,5 @@ Cíl: vědět, co reálně stáhneme, než napíšeme řádek appky.
 - [x] Řazení dle ceny/l a slevy, filtr „jen akce“ (hotové už v M3, ověřeno 21. 11.)
 - [x] Sparkline historie cen — `PriceSparkline` v detailu; data z `v_daily_best_price` (**migrace `004_price_history.sql` musí Ondra spustit v Neonu**). Zobrazí se od 2. dne s daty.
 - [x] PWA manifest — `/manifest.webmanifest`, generované ikony (`icon`, `apple-icon`, `/pwa-icon/*`), bez service workeru
-- [ ] P3 zdroje (pokud spike dovolí), víno/šumivé — čeká na rozhodnutí (víno je v rozporu s „Jen lihoviny“ z 21. 11.)
+- [x] ~~P3 zdroje, víno/šumivé~~ — 21. 11. rozhodnuto: nic dalšího, **pivo později** ([[Backlog]]).
+- [x] Fotky produktů (Tesco z katalogu, Penny z detailu produktu) a v detailu všechny dnešní ceny všech obchodů (požadavek 21. 11.)

@@ -64,7 +64,27 @@ class Penny(Source):
 
     def fetch(self) -> Iterator[ScrapedItem]:
         resp = self.http.get(CATEGORY_URL)
-        yield from parse_tiles(resp.text)
+        items = list(parse_tiles(resp.text))
+        # The listing only carries a lazy-load placeholder, so take the real
+        # photo from each product page (a handful per week, rate-limited).
+        images: dict[str, str | None] = {}
+        for it in items:
+            if it.store_sku in images or not it.url:
+                continue
+            try:
+                images[it.store_sku] = parse_og_image(self.http.get(it.url).text)
+            except Exception as exc:
+                log.warning("penny: no image for %r — %s", it.raw_name, exc)
+                images[it.store_sku] = None
+        for it in items:
+            image = images.get(it.store_sku)
+            yield it.model_copy(update={"image_url": image}) if image else it
+
+
+def parse_og_image(html: str) -> str | None:
+    node = HTMLParser(html).css_first('meta[property="og:image"]')
+    url = node.attributes.get("content") if node else None
+    return url if url and url.startswith("https://") else None
 
 
 def parse_tiles(html: str) -> Iterator[ScrapedItem]:

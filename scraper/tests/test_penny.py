@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from scraper.sources.penny import parse_tiles
+from scraper.sources.penny import parse_og_image, parse_tiles
 
 FIXTURE = (
     Path(__file__).parent
@@ -66,3 +66,16 @@ def test_tuzemak_shape(items):
     assert promo.volume_ml == 500
     assert promo.price_czk == Decimal("109.90")
     assert promo.regular_czk == Decimal("144.90")
+
+
+def test_og_image_from_product_page():
+    html = (
+        '<head><meta content="https://images.cdn.europe-west1.gcp.commercetools.com/x/88-442352.jpg" '
+        'property="og:image"></head>'
+    )
+    assert parse_og_image(html) == "https://images.cdn.europe-west1.gcp.commercetools.com/x/88-442352.jpg"
+
+
+def test_og_image_missing_or_not_https():
+    assert parse_og_image("<head></head>") is None
+    assert parse_og_image('<meta property="og:image" content="/relative.jpg">') is None
